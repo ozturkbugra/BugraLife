@@ -1,0 +1,341 @@
+﻿@model IEnumerable<Asset>
+
+@{
+    ViewData["Title"] = "Varlık Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@Html.AntiForgeryToken()
+
+<div class="card shadow-sm border-0 mt-3">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-cash-coin me-2"></i>Varlıklarım</h5>
+        <button type="button" class="btn btn-success btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Varlık Ekle
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table datatable table-hover table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Kişi / Kasa</th>
+                        <th>Varlık Türü</th>
+                        <th>Miktar</th>
+                        <th>Açıklama</th>
+                        <th width="100">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.asset_date.ToString("dd.MM.yyyy")</td>
+
+                            <td class="fw-bold">
+                                @(item.Person != null ? item.Person.person_name : "-")
+                            </td>
+
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    @(item.Ingredient != null ? item.Ingredient.ingredient_name : "-")
+                                </span>
+                            </td>
+
+                            <td class="fw-bold text-end pe-4">@item.asset_amount.ToString("N2")</td>
+
+                            <td class="text-muted small">@item.asset_description</td>
+
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-warning btn-sm text-white btn-edit"
+                                            data-id="@item.asset_id"
+                                            data-person="@item.person_id"
+                                            data-ingredient="@item.ingredient_id"
+                                            data-amount="@item.asset_amount"
+                                            data-date="@item.asset_date.ToString("yyyy-MM-dd")"
+                                            data-desc="@item.asset_description">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <button class="btn btn-danger btn-sm" onclick="deleteItem(@item.asset_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-success">Yeni Varlık Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createForm" method="post">
+                <div class="modal-body">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tarih</label>
+                            <input type="date" name="asset_date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Miktar</label>
+                            <input type="number" step="0.01" name="asset_amount" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Kişi / Kasa (Sadece Şahıslar)</label>
+                        <select name="person_id" class="aga-select" required>
+                            <option value="">Seçiniz...</option>
+                            @if (ViewBag.Persons != null)
+                            {
+                                foreach (var p in ViewBag.Persons as List<Person>)
+                                {
+                                    <option value="@p.person_id">@p.person_name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Varlık Türü</label>
+                        <select name="ingredient_id" class="aga-select" required>
+                            <option value="">Seçiniz...</option>
+                            @if (ViewBag.Ingredients != null)
+                            {
+                                foreach (var i in ViewBag.Ingredients as List<Ingredient>)
+                                {
+                                    <option value="@i.ingredient_id">@i.ingredient_name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="asset_description" class="form-control" rows="2"></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-success">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning">Varlık Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="asset_id" id="edit_id">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tarih</label>
+                            <input type="date" name="asset_date" id="edit_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Miktar</label>
+                            <input type="number" step="0.01" name="asset_amount" id="edit_amount" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Kişi / Kasa</label>
+                        <select name="person_id" id="edit_person" class="aga-select" required>
+                            <option value="">Seçiniz...</option>
+                            @if (ViewBag.Persons != null)
+                            {
+                                foreach (var p in ViewBag.Persons as List<Person>)
+                                {
+                                    <option value="@p.person_id">@p.person_name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Varlık Türü</label>
+                        <select name="ingredient_id" id="edit_ingredient" class="aga-select" required>
+                            <option value="">Seçiniz...</option>
+                            @if (ViewBag.Ingredients != null)
+                            {
+                                foreach (var i in ViewBag.Ingredients as List<Ingredient>)
+                                {
+                                    <option value="@i.ingredient_id">@i.ingredient_name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="asset_description" id="edit_desc" class="form-control" rows="2"></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning text-white">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            // --- A. DÜZENLEME BUTONU ---
+            $('.datatable').on('click', '.btn-edit', function() {
+                // 1. Verileri Butondan Oku
+                var id = $(this).data('id');
+                var personId = $(this).data('person');
+                var ingredientId = $(this).data('ingredient');
+                var amount = $(this).data('amount');
+                var dateStr = $(this).data('date'); // yyyy-MM-dd
+                var desc = $(this).data('desc');
+
+                // Konsola yazalım ki değerler doğru geliyor mu görelim (F12 -> Console)
+                console.log("Person ID:", personId, "Ingredient ID:", ingredientId);
+
+                // 2. Modal Inputlarını Doldur
+                $('#edit_id').val(id);
+
+                // --- SELECT GÜNCELLEME (ÖNEMLİ KISIM) ---
+                // Hem val() atıyoruz hem de trigger('change') diyoruz.
+                // Eğer select2 vb. kullanıyorsan görselin güncellenmesi için bu şart.
+                $('#edit_person').val(personId).trigger('change');
+                $('#edit_ingredient').val(ingredientId).trigger('change');
+
+                // 3. Miktar Formatı
+                // JS'de ondalık ayracı noktadır. Virgül gelirse noktaya çeviriyoruz.
+                if(amount) {
+                    var parsedAmount = amount.toString().replace(',', '.');
+                    $('#edit_amount').val(parsedAmount);
+                }
+
+                $('#edit_date').val(dateStr);
+                $('#edit_desc').val(desc);
+
+                // 4. Modalı Aç
+                $('#editModal').modal('show');
+            });
+
+            // --- B. EKLEME (AJAX) ---
+            $('#createForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Asset/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#createModal').modal('hide');
+                            // Toast kütüphanesi yoksa alert verelim hata almasın
+                            if(typeof showToast === "function") {
+                                showToast('success', response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            if(typeof showToast === "function") {
+                                showToast('error', response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                        }
+                    },
+                    error: function() {
+                         if(typeof showToast === "function") showToast('error', 'Hata oluştu.');
+                    }
+                });
+            });
+
+            // --- C. GÜNCELLEME (AJAX) ---
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Asset/Edit',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editModal').modal('hide');
+                            if(typeof showToast === "function") {
+                                showToast('success', response.message);
+                            }
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            if(typeof showToast === "function") {
+                                showToast('error', response.message);
+                            }
+                        }
+                    },
+                    error: function() {
+                        if(typeof showToast === "function") showToast('error', 'Hata oluştu.');
+                    }
+                });
+            });
+        });
+
+        // --- D. SİLME ---
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu varlık kaydı silinecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Asset/Delete',
+                        type: 'POST',
+                        data: { id: id, __RequestVerificationToken: token },
+                        success: function(response) {
+                            if (response.success) {
+                                if(typeof showToast === "function") {
+                                    showToast('success', response.message);
+                                }
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                if(typeof showToast === "function") {
+                                    showToast('error', response.message);
+                                }
+                            }
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}
