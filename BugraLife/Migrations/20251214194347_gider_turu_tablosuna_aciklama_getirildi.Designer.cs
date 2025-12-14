@@ -4,6 +4,7 @@ using BugraLife.DBContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BugraLife.Migrations
 {
     [DbContext(typeof(BugraLifeDBContext))]
-    partial class BugraLifeDBContextModelSnapshot : ModelSnapshot
+    [Migration("20251214194347_gider_turu_tablosuna_aciklama_getirildi")]
+    partial class gider_turu_tablosuna_aciklama_getirildi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

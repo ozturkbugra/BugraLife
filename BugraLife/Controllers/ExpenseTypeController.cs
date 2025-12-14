@@ -1,0 +1,91 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using BugraLife.Models;
+using BugraLife.DBContext;
+
+namespace BugraLife.Controllers
+{
+    public class ExpenseTypeController : Controller
+    {
+        private readonly BugraLifeDBContext _context;
+
+        public ExpenseTypeController(BugraLifeDBContext context)
+        {
+            _context = context;
+        }
+
+        // 1. LİSTELEME
+        public async Task<IActionResult> Index()
+        {
+            var list = await _context.ExpenseTypes.ToListAsync();
+
+            // Otomatik Sıra No Hesaplama (String to Int)
+            int nextOrder = 1;
+            if (list.Any())
+            {
+                nextOrder = list.Max(x => int.TryParse(x.expensetype_order, out int v) ? v : 0) + 1;
+            }
+            ViewBag.NextOrder = nextOrder;
+
+            // Listeyi sıraya göre dizip gönderelim
+            var sortedList = list.OrderBy(x => int.TryParse(x.expensetype_order, out int v) ? v : 0).ToList();
+
+            return View(sortedList);
+        }
+
+        // 2. EKLEME
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ExpenseType expenseType)
+        {
+            if (ModelState.IsValid)
+            {
+                bool exists = await _context.ExpenseTypes.AnyAsync(x => x.expensetype_name == expenseType.expensetype_name);
+                if (exists)
+                {
+                    return Json(new { success = false, message = "Bu gider türü zaten mevcut!" });
+                }
+
+                _context.ExpenseTypes.Add(expenseType);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Gider türü eklendi!" });
+            }
+            return Json(new { success = false, message = "Form verileri geçersiz." });
+        }
+
+        // 3. GÜNCELLEME
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(ExpenseType expenseType)
+        {
+            if (ModelState.IsValid)
+            {
+                bool exists = await _context.ExpenseTypes.AnyAsync(x => x.expensetype_name == expenseType.expensetype_name && x.expensetype_id != expenseType.expensetype_id);
+                if (exists)
+                {
+                    return Json(new { success = false, message = "Bu isimde başka bir kayıt zaten var!" });
+                }
+
+                _context.ExpenseTypes.Update(expenseType);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Güncelleme başarılı!" });
+            }
+            return Json(new { success = false, message = "Güncelleme başarısız." });
+        }
+
+        // 4. SİLME
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var item = await _context.ExpenseTypes.FindAsync(id);
+            if (item != null)
+            {
+                _context.ExpenseTypes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kayıt silindi." });
+            }
+            return Json(new { success = false, message = "Kayıt bulunamadı." });
+        }
+    }
+}

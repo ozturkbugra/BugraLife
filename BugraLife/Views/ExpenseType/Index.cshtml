@@ -1,0 +1,291 @@
+﻿@model IEnumerable<BugraLife.Models.ExpenseType>
+
+@{
+    ViewData["Title"] = "Gider Türleri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@Html.AntiForgeryToken()
+
+<div class="card shadow-sm border-0 mt-3">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-tags-fill me-2"></i>Gider Türü Tanımları</h5>
+
+        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Ekle
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table datatable table-hover table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th width="50">Sıra</th>
+                        <th>Gider Türü Adı</th>
+                        <th>Açıklama</th>
+                        <th>Özellikler</th>
+                        <th width="100">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="text-center fw-bold">@item.expensetype_order</td>
+                            <td class="fw-bold">@item.expensetype_name</td>
+
+                            <td class="text-muted small">
+                                @(!string.IsNullOrEmpty(item.description) ? item.description : "-")
+                            </td>
+
+                            <td>
+                                <div class="d-flex gap-2">
+                                    @if (item.is_bank)
+                                    {
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                                            <i class="bi bi-bank me-1"></i> Banka Transferi
+                                        </span>
+                                    }
+                                    @if (item.is_home)
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                            <i class="bi bi-house-door me-1"></i> Ana Sayfada Gözüküyor
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-warning btn-sm text-white btn-edit"
+                                            data-id="@item.expensetype_id"
+                                            data-name="@item.expensetype_name"
+                                            data-desc="@item.description"
+                                            data-order="@item.expensetype_order"
+                                            data-bank="@item.is_bank"
+                                            data-home="@item.is_home">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <button class="btn btn-danger btn-sm" onclick="deleteItem(@item.expensetype_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-primary">Yeni Gider Türü</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createForm" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Gider Türü Adı</label>
+                        <input type="text" name="expensetype_name" class="form-control" required placeholder="Örn: Mutfak">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Kısa bir açıklama..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_bank" value="true" id="create_is_bank">
+                                <label class="form-check-label" for="create_is_bank">Banka Transferi Mi?</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_home" value="true" id="create_is_home">
+                                <label class="form-check-label" for="create_is_home">Ana Sayfada Gözüksün Mü?</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sıralama</label>
+                        <input type="number" name="expensetype_order" id="create_order" class="form-control" value="@ViewBag.NextOrder">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning">Gider Türü Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="expensetype_id" id="edit_id">
+
+                    <div class="mb-3">
+                        <label class="form-label">Gider Türü Adı</label>
+                        <input type="text" name="expensetype_name" id="edit_name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_bank" value="true" id="edit_is_bank">
+                                <label class="form-check-label" for="edit_is_bank">Banka Transferi Mi?</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_home" value="true" id="edit_is_home">
+                                <label class="form-check-label" for="edit_is_home">Ana Sayfada Gözüksün Mü</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sıralama</label>
+                        <input type="number" name="expensetype_order" id="edit_order" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning text-white">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            // --- A. DÜZENLEME BUTONU ---
+            $('.datatable').on('click', '.btn-edit', function() {
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+                var desc = $(this).data('desc'); // Açıklamayı okuyoruz
+                var order = $(this).data('order');
+
+                var isBank = $(this).data('bank') === "True" || $(this).data('bank') === true;
+                var isHome = $(this).data('home') === "True" || $(this).data('home') === true;
+
+                $('#edit_id').val(id);
+                $('#edit_name').val(name);
+                $('#edit_desc').val(desc); // Modal içine yazıyoruz
+                $('#edit_order').val(order);
+
+                $('#edit_is_bank').prop('checked', isBank);
+                $('#edit_is_home').prop('checked', isHome);
+
+                $('#editModal').modal('show');
+            });
+
+            // --- B. EKLEME (AJAX) ---
+            $('#createForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/ExpenseType/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#createModal').modal('hide');
+                            showToast('success', response.message);
+
+                            // Formu sıfırlama (sıralama hariç)
+                            var currentVal = parseInt($('#create_order').val()) || 0;
+                            $('#create_order').val(currentVal + 1);
+
+                            $('input[name="expensetype_name"]').val('');
+                            $('textarea[name="description"]').val(''); // Açıklamayı temizle
+                            $('#create_is_bank').prop('checked', false);
+                            $('#create_is_home').prop('checked', false);
+
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() { showToast('error', 'Hata oluştu.'); }
+                });
+            });
+
+            // --- C. GÜNCELLEME (AJAX) ---
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/ExpenseType/Edit',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() { showToast('error', 'Hata oluştu.'); }
+                });
+            });
+        });
+
+        // --- D. SİLME ---
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu gider türü silinecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/ExpenseType/Delete',
+                        type: 'POST',
+                        data: { id: id, __RequestVerificationToken: token },
+                        success: function(response) {
+                            if (response.success) {
+                                showToast('success', response.message);
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}

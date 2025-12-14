@@ -10,6 +10,7 @@ namespace BugraLife.Models
         public string expensetype_order { get; set; }
         public bool is_bank { get; set; }
         public bool is_home { get; set; }
+        public string description { get; set; }
 
     }
 }
