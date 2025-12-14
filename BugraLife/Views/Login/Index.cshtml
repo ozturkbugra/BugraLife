@@ -1,0 +1,56 @@
+﻿@{
+    Layout = null; // Bu sayfada ana layout'u kullanmıyoruz
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giriş Yap - BugraLife</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/giris.css" asp-append-version="true" />
+
+   
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-header">
+            <h2>Hoş Geldiniz</h2>
+            <p>BugraLife paneline giriş yapın.</p>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert-error">
+                @ViewBag.Error
+            </div>
+        }
+
+        <form action="/Login/Index" method="post">
+            <div class="form-group">
+                <label for="username">Kullanıcı Adı</label>
+                <input type="text" id="username" name="username" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <label class="checkbox-group">
+                <input type="checkbox" name="rememberMe" value="true">
+                Beni Hatırla
+            </label>
+
+            <button type="submit" class="btn-login">Giriş Yap</button>
+        </form>
+
+        <div class="footer-text">
+            &copy; @DateTime.Now.Year BugraLife Mobile
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,194 @@
+﻿<script>
+        /* BugraLife Admin Panel Scripts
+        - Sidebar & Mobile Menu
+        - Dark Mode
+        - DataTables Init
+        - Aga Select (Custom Multi Select)
+    */
+
+    // GLOBAL TOAST FUNCTION (Her yerden erişilebilir)
+    function showToast(icon, title) {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({
+            icon: icon, // 'success', 'error', 'warning', 'info'
+            title: title
+        });
+    }
+
+    $(document).ready(function() {
+
+        // 1. SIDEBAR TOGGLE
+        $("#menu-toggle").click(function(e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("toggled");
+        });
+
+        // 2. MOBİL ARAMA TOGGLE
+        $("#mobile-search-toggle").click(function() {
+            $("#search-container-wrapper").toggleClass("active");
+            if ($("#search-container-wrapper").hasClass("active")) {
+                $("#menu-search-input").focus();
+            }
+        });
+
+        // 3. MENÜ ARAMA (TÜRKÇE KARAKTER DESTEKLİ)
+        $("#menu-search-input").on("keyup", function() {
+            var value = $(this).val().toLocaleLowerCase('tr-TR');
+            $("#sidebar-menu .menu-item").filter(function() {
+                $(this).toggle($(this).text().toLocaleLowerCase('tr-TR').indexOf(value) > -1)
+            });
+        });
+
+        // 4. DATATABLES OTOMATİK KURULUM
+        // class="datatable" olan tüm tablolar
+        if ($.fn.DataTable) {
+            $('.datatable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+                },
+                responsive: true,
+                drawCallback: function() {
+                    $('.page-link').addClass('shadow-sm');
+                }
+            });
+        }
+
+        // 5. DARK MODE LOGIC
+        const themeToggleBtn = document.getElementById('dark-mode-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+
+        if (themeToggleBtn) {
+            // Kayıtlı temayı yükle
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme) {
+                document.documentElement.setAttribute('data-theme', currentTheme);
+                if (currentTheme === 'dark') {
+                    themeIcon.classList.replace('bi-moon-stars-fill', 'bi-sun-fill');
+                }
+            }
+
+            // Butona basınca değiştir
+            themeToggleBtn.addEventListener('click', () => {
+                let theme = document.documentElement.getAttribute('data-theme');
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    themeIcon.classList.replace('bi-sun-fill', 'bi-moon-stars-fill');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeIcon.classList.replace('bi-moon-stars-fill', 'bi-sun-fill');
+                }
+            });
+        }
+
+        // 6. AGA SELECT (CUSTOM MULTI SELECT)
+        // class="aga-select" olan tüm select'ler
+        $('.aga-select').each(function() {
+            const originalSelect = $(this);
+            originalSelect.hide(); // Orjinalini gizle
+
+            let optionsHtml = '';
+            originalSelect.find('option').each(function() {
+                const val = $(this).val();
+                const text = $(this).text();
+                if (val === "") return; // Placeholder'ı atla
+
+                optionsHtml += `
+                    <label class="aga-option-item">
+                        <input type="checkbox" value="${val}" data-text="${text}">
+                        <span>${text}</span>
+                    </label>
+                `;
+            });
+
+            const wrapper = $(`
+                <div class="aga-select-wrapper">
+                    <div class="aga-select-trigger">Seçiniz...</div>
+                    <div class="aga-select-dropdown">
+                        <input type="text" class="aga-search-box" placeholder="Ara...">
+                        <span class="select-all-btn">Tümünü Seç / Kaldır</span>
+                        <div class="aga-options-list">
+                            ${optionsHtml}
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            originalSelect.after(wrapper);
+
+            const trigger = wrapper.find('.aga-select-trigger');
+            const dropdown = wrapper.find('.aga-select-dropdown');
+            const searchBox = wrapper.find('.aga-search-box');
+            const checkboxes = wrapper.find('input[type="checkbox"]');
+            const selectAllBtn = wrapper.find('.select-all-btn');
+
+            // Aç/Kapa
+            trigger.on('click', function(e) {
+                e.stopPropagation();
+                $('.aga-select-dropdown').not(dropdown).removeClass('active');
+                dropdown.toggleClass('active');
+            });
+
+            // Dışarı tıklayınca kapat
+            $(document).on('click', function() {
+                dropdown.removeClass('active');
+            });
+
+            dropdown.on('click', function(e) {
+                e.stopPropagation();
+            });
+
+            // Arama
+            searchBox.on('keyup', function() {
+                const value = $(this).val().toLocaleLowerCase('tr-TR');
+                wrapper.find('.aga-option-item').filter(function() {
+                    $(this).toggle($(this).text().toLocaleLowerCase('tr-TR').indexOf(value) > -1)
+                });
+            });
+
+            // Tümünü Seç
+            selectAllBtn.on('click', function() {
+                const allChecked = checkboxes.length === checkboxes.filter(':checked').length;
+                checkboxes.prop('checked', !allChecked).trigger('change');
+            });
+
+            // Seçim Değişimi
+            checkboxes.on('change', function() {
+                const selectedValues = [];
+                const selectedTexts = [];
+
+                checkboxes.filter(':checked').each(function() {
+                    selectedValues.push($(this).val());
+                    selectedTexts.push($(this).attr('data-text'));
+                });
+
+                originalSelect.val(selectedValues); // Backend'e giden veriyi güncelle
+
+                if (selectedTexts.length > 0) {
+                    if (selectedTexts.length > 2) {
+                        trigger.text(selectedTexts.length + " kayıt seçildi");
+                    } else {
+                        trigger.text(selectedTexts.join(', '));
+                    }
+                    trigger.css('color', 'var(--text-color)');
+                } else {
+                    trigger.text("Seçiniz...");
+                    trigger.css('color', 'var(--text-muted)');
+                }
+            });
+        });
+
+    });
+</script>

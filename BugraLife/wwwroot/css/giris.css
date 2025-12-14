@@ -1,0 +1,126 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px; /* Mobilde kenarlardan taþmasýn */
+}
+
+.login-container {
+    background-color: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-header h2 {
+    color: #333;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.login-header p {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #666;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="password"] {
+        width: 100%;
+        padding: 14px; /* Mobilde parmakla basmak kolay olsun diye büyüttük */
+        border: 2px solid #eee;
+        border-radius: 12px;
+        outline: none;
+        font-size: 16px; /* Mobilde zoom yapmamasý için ideal boyut */
+        transition: border-color 0.3s;
+    }
+
+    .form-group input:focus {
+        border-color: #764ba2;
+    }
+
+/* Checkbox Tasarýmý */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+}
+
+    .checkbox-group input {
+        margin-right: 10px;
+        width: 18px;
+        height: 18px;
+        accent-color: #764ba2;
+    }
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(to right, #667eea, #764ba2);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+    .btn-login:hover {
+        opacity: 0.9;
+    }
+
+.alert-error {
+    background-color: #ffdddd;
+    color: #d8000c;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    border: 1px solid #ffcccc;
+}
+
+.footer-text {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #aaa;
+}
+
+/* MOBÝL UYUMLULUK (Responsive) */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 30px 20px; /* Mobilde iç boþluðu azalttýk */
+    }
+
+    .login-header h2 {
+        font-size: 24px;
+    }
+}

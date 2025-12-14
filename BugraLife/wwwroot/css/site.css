@@ -1,0 +1,516 @@
+﻿/* =========================================
+   1. TEMEL AYARLAR & DEĞİŞKENLER
+   ========================================= */
+:root {
+    /* --- LIGHT MODE (Varsayılan) --- */
+    --bg-body: #f4f6f9;
+    --bg-sidebar: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --bg-navbar: #ffffff;
+    --text-color: #333333;
+    --text-muted: #6c757d;
+    --link-color: #667eea; /* Link rengi */
+    --link-hover: #5a6fd6;
+    --border-color: rgba(0,0,0,0.1);
+    --card-bg: #ffffff;
+    --input-bg: #f4f6f9;
+    --input-border: #ddd;
+    --input-text: #495057;
+    /* Sidebar Boyutları */
+    --sidebar-width: 260px;
+    --top-navbar-height: 70px;
+}
+
+/* --- DARK MODE DEĞİŞKENLERİ --- */
+[data-theme="dark"] {
+    --bg-body: #1a1c23; /* Koyu Antrasit */
+    --bg-sidebar: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+    --bg-navbar: #252b36;
+    --text-color: #e2e8f0; /* Açık Gri/Beyazımsı */
+    --text-muted: #a0aec0;
+    --link-color: #a3bffa; /* Dark modda linkler daha parlak olmalı */
+    --link-hover: #ffffff;
+    --border-color: rgba(255,255,255,0.1);
+    --card-bg: #252b36;
+    --input-bg: #2d3748;
+    --input-border: #4a5568;
+    --input-text: #e2e8f0;
+}
+
+/* --- GENEL BODY AYARLARI --- */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-color);
+    overflow-x: hidden;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Link Ayarları */
+a {
+    color: var(--link-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+    a:hover {
+        color: var(--link-hover);
+    }
+
+/* Yazı Seçim Rengi (Mouse ile seçince) */
+::selection {
+    background-color: #667eea;
+    color: #ffffff;
+}
+
+/* --- SCROLLBAR (KAYDIRMA ÇUBUĞU) --- */
+/* Webkit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-body);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
+    }
+
+/* =========================================
+   2. SIDEBAR (SOL MENÜ)
+   ========================================= */
+#wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+#sidebar-wrapper {
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    background: var(--bg-sidebar);
+    color: #fff;
+    transition: margin 0.3s;
+    min-height: 100vh;
+}
+
+    #sidebar-wrapper .sidebar-heading {
+        padding: 1.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+    }
+
+    /* Sidebar Linkleri - Burası özel olduğu için beyaz kalmalı */
+    #sidebar-wrapper .list-group-item {
+        background-color: transparent;
+        color: rgba(255, 255, 255, 0.8) !important; /* Önemli: Global link rengini ezmeli */
+        border: none;
+        padding: 1rem 1.5rem;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+        #sidebar-wrapper .list-group-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff !important;
+            padding-left: 2rem;
+        }
+
+        #sidebar-wrapper .list-group-item i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: -260px;
+}
+
+/* =========================================
+   3. NAVBAR & KARTLAR & MODALLAR
+   ========================================= */
+#page-content-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-navbar {
+    height: var(--top-navbar-height);
+    background-color: var(--bg-navbar);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.3s;
+}
+
+    /* Navbar Butonları */
+    .top-navbar .btn-light,
+    .top-navbar .dropdown-toggle {
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+
+/* Dropdown Menüler */
+.dropdown-menu {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+.dropdown-item {
+    color: var(--text-color);
+}
+
+    .dropdown-item:hover, .dropdown-item:focus {
+        background-color: var(--input-bg);
+        color: var(--text-color);
+    }
+
+/* Bootstrap Kartları (Card) */
+.card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Bootstrap Modalları */
+.modal-content {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--border-color);
+}
+
+.btn-close {
+    /* Dark modda çarpı işaretini beyaza çevirir */
+    filter: invert(var(--bs-btn-close-white-filter, 0));
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.profile-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #667eea;
+}
+
+.main-content {
+    padding: 2rem;
+    flex: 1;
+}
+
+/* =========================================
+   4. ARAMA KUTUSU (Responsive)
+   ========================================= */
+.search-container {
+    position: relative;
+    max-width: 400px;
+    width: 100%;
+}
+
+.search-box input {
+    background-color: var(--input-bg);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    padding: 10px 20px 10px 40px;
+    width: 100%;
+    outline: none;
+    color: var(--input-text);
+}
+
+.search-icon-inside {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.mobile-search-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: -260px;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: 0;
+    }
+
+    .search-container {
+        display: none;
+        position: absolute;
+        top: 75px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        z-index: 999;
+    }
+
+        .search-container.active {
+            display: block;
+        }
+
+    .search-box input {
+        border: 1px solid var(--border-color);
+        background-color: var(--card-bg);
+    }
+
+    .mobile-search-btn {
+        display: block;
+    }
+}
+
+/* =========================================
+   5. TABLOLAR (DataTables & Normal)
+   ========================================= */
+/* DataTables Kontrolleri */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_processing,
+.dataTables_wrapper .dataTables_paginate {
+    color: var(--text-color) !important;
+    margin-bottom: 1rem;
+}
+
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+        background-color: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        border-radius: 10px;
+        padding: 5px 10px;
+        outline: none;
+    }
+
+/* Tablo Genel Yapısı */
+table.dataTable, .table {
+    width: 100% !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important; /* Yazı rengini zorla */
+    background-color: transparent !important; /* Arka planı şeffaf yap */
+}
+
+    /* Tablo Başlıkları (Header) */
+    table.dataTable thead th, .table thead th {
+        border-bottom: 2px solid var(--border-color) !important;
+        color: var(--text-color) !important;
+        background-color: var(--bg-body) !important; /* Başlıklar hafif farklı ton */
+    }
+
+    /* Tablo Hücreleri (Rows) */
+    table.dataTable tbody td, .table tbody td {
+        border-bottom: 1px solid var(--border-color) !important;
+        background-color: transparent !important; /* Hücre arka planını temizle */
+        color: var(--text-color) !important; /* Yazıyı görünür yap */
+    }
+
+    /* Satırlar (TR) */
+    table.dataTable tbody tr {
+        background-color: transparent !important;
+        color: var(--text-color) !important;
+    }
+
+/* Striped (Şeritli) Efekt - Dark Mode Uyumlu */
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(255, 255, 255, 0.03) !important; /* Hafif aydınlık şerit */
+    color: var(--text-color) !important;
+    box-shadow: none !important; /* Bootstrap gölgesini kaldır */
+}
+
+/* Hover (Üzerine Gelme) Efekti - Dark Mode Uyumlu */
+.table-hover > tbody > tr:hover > * {
+    background-color: rgba(255, 255, 255, 0.08) !important; /* Daha belirgin aydınlık */
+    color: var(--text-color) !important;
+    box-shadow: none !important;
+}
+
+/* Sayfalama Butonları */
+.page-item .page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.page-item.active .page-link {
+    background-color: #667eea !important;
+    border-color: #667eea !important;
+    color: white !important;
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+
+/* =========================================
+   6. AGA SELECT (CUSTOM SELECT BOX)
+   ========================================= */
+.aga-select-wrapper {
+    position: relative;
+    width: 100%;
+    font-family: 'Poppins', sans-serif;
+    margin-bottom: 1rem;
+}
+
+.aga-select-trigger {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    min-height: 45px;
+}
+
+    .aga-select-trigger:after {
+        content: '▼';
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+.aga-select-dropdown {
+    position: absolute;
+    top: 105%;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: none;
+    z-index: 9999;
+    padding: 10px;
+}
+
+    .aga-select-dropdown.active {
+        display: block;
+        animation: fadeIn 0.2s ease-in-out;
+    }
+
+.aga-search-box {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+.aga-options-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.aga-option-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-color);
+    transition: background 0.2s;
+}
+
+    .aga-option-item:hover {
+        background-color: var(--input-bg);
+    }
+
+    .aga-option-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #667eea;
+        cursor: pointer;
+    }
+
+.select-all-btn {
+    font-size: 0.85rem;
+    color: #667eea;
+    cursor: pointer;
+    margin-bottom: 10px;
+    display: block;
+    font-weight: 600;
+}
+
+    .select-all-btn:hover {
+        text-decoration: underline;
+    }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================
+   7. SWEET ALERT 2 & FORM ELEMANLARI
+   ========================================= */
+/* SweetAlert Dark Mode Uyumu */
+[data-theme="dark"] div:where(.swal2-container) div:where(.swal2-popup) {
+    background: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] div:where(.swal2-icon) {
+    border-color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .swal2-title,
+[data-theme="dark"] .swal2-html-container {
+    color: var(--text-color) !important;
+}
+
+/* Standart Inputlar (Form Control) */
+.form-control, .form-select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--input-text);
+}
+
+    .form-control:focus, .form-select:focus {
+        background-color: var(--input-bg);
+        border-color: #667eea;
+        color: var(--input-text);
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }

@@ -1,0 +1,231 @@
+﻿@model IEnumerable<WebSite>
+
+@{
+    ViewData["Title"] = "Web Siteleri";
+}
+@Html.AntiForgeryToken()
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-globe me-2"></i>Web Siteleri</h5>
+
+        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Ekle
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table datatable table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Site Adı</th>
+                        <th>URL</th>
+                        <th>Açıklama</th>
+                        <th width="100">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@item.website_name</td>
+                            <td><a href="@item.website_url" target="_blank">@item.website_url</a></td>
+                            <td>@item.website_description</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-warning btn-sm text-white btn-edit"
+                                            data-id="@item.website_id"
+                                            data-name="@item.website_name"
+                                            data-url="@item.website_url"
+                                            data-desc="@item.website_description">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <button class="btn btn-danger btn-sm" onclick="deleteItem(@item.website_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-primary">Yeni Site Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createForm" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Site Adı</label>
+                        <input type="text" name="website_name" class="form-control" required placeholder="Örn: Google">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Site URL</label>
+                        <input type="text" name="website_url" class="form-control" required placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="website_description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning">Site Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="website_id" id="edit_id">
+
+                    <div class="mb-3">
+                        <label class="form-label">Site Adı</label>
+                        <input type="text" name="website_name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Site URL</label>
+                        <input type="text" name="website_url" id="edit_url" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="website_description" id="edit_desc" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning text-white">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            // --- A. DÜZENLEME BUTONUNA BASILINCA ---
+            // Tablo içindeki .btn-edit butonuna tıklanınca verileri alıp modala doldur
+            $('.datatable').on('click', '.btn-edit', function() {
+                // 1. Butondaki verileri al
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+                var url = $(this).data('url');
+                var desc = $(this).data('desc');
+
+                // 2. Edit Modalındaki inputlara yaz
+                $('#edit_id').val(id);
+                $('#edit_name').val(name);
+                $('#edit_url').val(url);
+                $('#edit_desc').val(desc);
+
+                // 3. Modalı aç
+                $('#editModal').modal('show');
+            });
+
+            // --- B. EKLEME İŞLEMİ (AJAX) ---
+            $('#createForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/WebSite/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#createModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000); // 1 sn sonra yenile
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    }
+                });
+            });
+
+            // --- C. GÜNCELLEME İŞLEMİ (AJAX) ---
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/WebSite/Edit',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    }
+                });
+            });
+        });
+
+        // --- D. SİLME İŞLEMİ ---
+                // --- D. SİLME İŞLEMİ ---
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu kayıt kalıcı olarak silinecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // 1. Jetonu (Token) alıyoruz
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+
+                    $.ajax({
+                        url: '/WebSite/Delete', // Controller adı WebSite ise doğru
+                        type: 'POST',
+                        // 2. Verinin yanına token'ı da ekliyoruz
+                        data: {
+                            id: id,
+                            __RequestVerificationToken: token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                showToast('success', response.message);
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        },
+                        error: function() {
+                            showToast('error', 'Silme işlemi sırasında sunucu hatası oluştu.');
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}
