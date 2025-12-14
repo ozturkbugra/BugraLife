@@ -290,6 +290,36 @@ a {
    5. TABLOLAR (DataTables & Normal)
    ========================================= */
 /* DataTables Kontrolleri */
+.dataTables_wrapper {
+    width: 100%;
+}
+
+    /* 1. Üst Kısım Hizalaması (Length Sol, Filter Sağ) */
+    .dataTables_wrapper .dataTables_length {
+        float: left !important;
+        text-align: left !important;
+    }
+
+    .dataTables_wrapper .dataTables_filter {
+        float: right !important;
+        text-align: right !important;
+    }
+
+/* Flexbox kullanan yeni versiyonlar için alternatif hizalama */
+@media (min-width: 768px) {
+    .dataTables_wrapper .row:first-child {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dataTables_wrapper .dataTables_filter {
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+/* Ortak Yazı ve Boşluk Ayarları */
 .dataTables_wrapper .dataTables_length,
 .dataTables_wrapper .dataTables_filter,
 .dataTables_wrapper .dataTables_info,
@@ -299,6 +329,7 @@ a {
     margin-bottom: 1rem;
 }
 
+    /* Input ve Select Kutuları */
     .dataTables_wrapper .dataTables_filter input,
     .dataTables_wrapper .dataTables_length select {
         background-color: var(--input-bg);
@@ -307,46 +338,44 @@ a {
         border-radius: 10px;
         padding: 5px 10px;
         outline: none;
+        margin-left: 0.5rem; /* Etiket ile kutu arası boşluk */
     }
 
-/* Tablo Genel Yapısı */
+/* --- TABLO GÖRÜNÜMÜ (Önceki düzeltmeler dahil) --- */
 table.dataTable, .table {
     width: 100% !important;
     border-color: var(--border-color) !important;
-    color: var(--text-color) !important; /* Yazı rengini zorla */
-    background-color: transparent !important; /* Arka planı şeffaf yap */
+    color: var(--text-color) !important;
+    background-color: transparent !important;
 }
 
-    /* Tablo Başlıkları (Header) */
     table.dataTable thead th, .table thead th {
         border-bottom: 2px solid var(--border-color) !important;
         color: var(--text-color) !important;
-        background-color: var(--bg-body) !important; /* Başlıklar hafif farklı ton */
+        background-color: var(--bg-body) !important;
     }
 
-    /* Tablo Hücreleri (Rows) */
     table.dataTable tbody td, .table tbody td {
         border-bottom: 1px solid var(--border-color) !important;
-        background-color: transparent !important; /* Hücre arka planını temizle */
-        color: var(--text-color) !important; /* Yazıyı görünür yap */
+        background-color: transparent !important;
+        color: var(--text-color) !important;
     }
 
-    /* Satırlar (TR) */
     table.dataTable tbody tr {
         background-color: transparent !important;
         color: var(--text-color) !important;
     }
 
-/* Striped (Şeritli) Efekt - Dark Mode Uyumlu */
+/* Striped Efekt */
 .table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: rgba(255, 255, 255, 0.03) !important; /* Hafif aydınlık şerit */
+    background-color: rgba(255, 255, 255, 0.03) !important;
     color: var(--text-color) !important;
-    box-shadow: none !important; /* Bootstrap gölgesini kaldır */
+    box-shadow: none !important;
 }
 
-/* Hover (Üzerine Gelme) Efekti - Dark Mode Uyumlu */
+/* Hover Efekti */
 .table-hover > tbody > tr:hover > * {
-    background-color: rgba(255, 255, 255, 0.08) !important; /* Daha belirgin aydınlık */
+    background-color: rgba(255, 255, 255, 0.08) !important;
     color: var(--text-color) !important;
     box-shadow: none !important;
 }
@@ -370,6 +399,15 @@ table.dataTable, .table {
     color: var(--text-muted);
 }
 
+/* Mobilde ortalasın (Daha şık durur) */
+@media (max-width: 768px) {
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        text-align: center !important;
+        float: none !important;
+        justify-content: center !important;
+    }
+}
 /* =========================================
    6. AGA SELECT (CUSTOM SELECT BOX)
    ========================================= */
@@ -482,6 +520,19 @@ table.dataTable, .table {
     }
 }
 
+
+.aga-option-item.selected {
+    background-color: #eef2ff; /* Hafif mor arka plan */
+    color: #667eea; /* Tema rengi yazı */
+    font-weight: 600;
+}
+
+    .aga-option-item.selected:after {
+        content: '✓';
+        margin-left: auto; /* Sağa yasla */
+        font-weight: bold;
+    }
+
 /* =========================================
    7. SWEET ALERT 2 & FORM ELEMANLARI
    ========================================= */
@@ -514,3 +565,5 @@ table.dataTable, .table {
         color: var(--input-text);
         box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
     }
+
+

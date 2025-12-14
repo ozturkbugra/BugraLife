@@ -1,12 +1,9 @@
 ﻿<script>
-        /* BugraLife Admin Panel Scripts
-        - Sidebar & Mobile Menu
-        - Dark Mode
-        - DataTables Init
-        - Aga Select (Custom Multi Select)
-    */
+        /* =========================================================
+       BugraLife Admin Panel - Ana JavaScript Dosyası (FULL SÜRÜM)
+       ========================================================= */
 
-    // GLOBAL TOAST FUNCTION (Her yerden erişilebilir)
+    // 1. GLOBAL TOAST FONKSİYONU (Her yerden erişilebilir)
     function showToast(icon, title) {
         const Toast = Swal.mixin({
             toast: true,
@@ -28,21 +25,15 @@
 
     $(document).ready(function() {
 
-        // 1. SIDEBAR TOGGLE
+        // =========================================================
+        // 2. SIDEBAR (SOL MENÜ) İŞLEMLERİ
+        // =========================================================
         $("#menu-toggle").click(function(e) {
             e.preventDefault();
             $("#wrapper").toggleClass("toggled");
         });
 
-        // 2. MOBİL ARAMA TOGGLE
-        $("#mobile-search-toggle").click(function() {
-            $("#search-container-wrapper").toggleClass("active");
-            if ($("#search-container-wrapper").hasClass("active")) {
-                $("#menu-search-input").focus();
-            }
-        });
-
-        // 3. MENÜ ARAMA (TÜRKÇE KARAKTER DESTEKLİ)
+        // Menüde Arama (Türkçe Karakter Destekli)
         $("#menu-search-input").on("keyup", function() {
             var value = $(this).val().toLocaleLowerCase('tr-TR');
             $("#sidebar-menu .menu-item").filter(function() {
@@ -50,8 +41,21 @@
             });
         });
 
+
+        // =========================================================
+        // 3. MOBİL ARAMA
+        // =========================================================
+        $("#mobile-search-toggle").click(function() {
+            $("#search-container-wrapper").toggleClass("active");
+            if ($("#search-container-wrapper").hasClass("active")) {
+                $("#menu-search-input").focus();
+            }
+        });
+
+
+        // =========================================================
         // 4. DATATABLES OTOMATİK KURULUM
-        // class="datatable" olan tüm tablolar
+        // =========================================================
         if ($.fn.DataTable) {
             $('.datatable').DataTable({
                 language: {
@@ -64,12 +68,14 @@
             });
         }
 
-        // 5. DARK MODE LOGIC
+
+        // =========================================================
+        // 5. DARK MODE (GECE MODU)
+        // =========================================================
         const themeToggleBtn = document.getElementById('dark-mode-toggle');
         const themeIcon = document.getElementById('theme-icon');
 
         if (themeToggleBtn) {
-            // Kayıtlı temayı yükle
             const currentTheme = localStorage.getItem('theme');
             if (currentTheme) {
                 document.documentElement.setAttribute('data-theme', currentTheme);
@@ -78,7 +84,6 @@
                 }
             }
 
-            // Butona basınca değiştir
             themeToggleBtn.addEventListener('click', () => {
                 let theme = document.documentElement.getAttribute('data-theme');
                 if (theme === 'dark') {
@@ -93,32 +98,52 @@
             });
         }
 
-        // 6. AGA SELECT (CUSTOM MULTI SELECT)
-        // class="aga-select" olan tüm select'ler
+
+        // =========================================================
+        // 6. AGA SELECT (AKILLI SEÇİM KUTUSU)
+        // =========================================================
         $('.aga-select').each(function() {
             const originalSelect = $(this);
-            originalSelect.hide(); // Orjinalini gizle
+            const isMulti = originalSelect.prop('multiple'); // Çoklu mu Tekli mi?
 
+            originalSelect.hide(); // Orjinal select'i gizle
+
+            // --- A. Seçenekleri Hazırla ---
             let optionsHtml = '';
             originalSelect.find('option').each(function() {
                 const val = $(this).val();
                 const text = $(this).text();
+                const isSelected = $(this).is(':selected');
+
                 if (val === "") return; // Placeholder'ı atla
 
-                optionsHtml += `
-                    <label class="aga-option-item">
-                        <input type="checkbox" value="${val}" data-text="${text}">
-                        <span>${text}</span>
-                    </label>
-                `;
+                if (isMulti) {
+                    // Çoklu Mod (Checkbox)
+                    optionsHtml += `
+                        <label class="aga-option-item ${isSelected ? 'selected' : ''}">
+                            <input type="checkbox" value="${val}" data-text="${text}" ${isSelected ? 'checked' : ''}>
+                            <span>${text}</span>
+                        </label>
+                    `;
+                } else {
+                    // Tekli Mod (Div)
+                    optionsHtml += `
+                        <div class="aga-option-item ${isSelected ? 'selected' : ''}" data-value="${val}" data-text="${text}">
+                            <span>${text}</span>
+                        </div>
+                    `;
+                }
             });
+
+            // --- B. HTML İskeleti ---
+            const selectAllHtml = isMulti ? '<span class="select-all-btn">Tümünü Seç / Kaldır</span>' : '';
 
             const wrapper = $(`
                 <div class="aga-select-wrapper">
                     <div class="aga-select-trigger">Seçiniz...</div>
                     <div class="aga-select-dropdown">
                         <input type="text" class="aga-search-box" placeholder="Ara...">
-                        <span class="select-all-btn">Tümünü Seç / Kaldır</span>
+                        ${selectAllHtml}
                         <div class="aga-options-list">
                             ${optionsHtml}
                         </div>
@@ -128,29 +153,79 @@
 
             originalSelect.after(wrapper);
 
+            // --- C. Değişkenler ---
             const trigger = wrapper.find('.aga-select-trigger');
             const dropdown = wrapper.find('.aga-select-dropdown');
             const searchBox = wrapper.find('.aga-search-box');
-            const checkboxes = wrapper.find('input[type="checkbox"]');
-            const selectAllBtn = wrapper.find('.select-all-btn');
 
-            // Aç/Kapa
+            // --- D. Trigger Yazısını Güncelleme ---
+            function updateTriggerText() {
+                if (isMulti) {
+                    const checked = wrapper.find('input[type="checkbox"]:checked');
+                    if (checked.length > 0) {
+                        if (checked.length > 2) {
+                            trigger.text(checked.length + " kayıt seçildi");
+                        } else {
+                            const texts = checked.map(function() { return $(this).attr('data-text'); }).get();
+                            trigger.text(texts.join(', '));
+                        }
+                        trigger.css('color', 'var(--text-color)');
+                    } else {
+                        trigger.text("Seçiniz...");
+                        trigger.css('color', 'var(--text-muted)');
+                    }
+                } else {
+                    // Tekli Mod
+                    const selected = wrapper.find('.aga-option-item.selected');
+                    if (selected.length > 0) {
+                        trigger.text(selected.data('text'));
+                        trigger.css('color', 'var(--text-color)');
+                    } else {
+                        trigger.text("Seçiniz...");
+                        trigger.css('color', 'var(--text-muted)');
+                    }
+                }
+            }
+
+            // Başlangıçta çalıştır
+            updateTriggerText();
+
+
+            // --- E. DIŞARIDAN DEĞİŞİM (EDIT BUTONU TETİKLERSE) ---
+            originalSelect.on('change', function() {
+                const newVal = $(this).val();
+
+                if (!isMulti) {
+                    // Tekli Mod: Görseli güncelle
+                    wrapper.find('.aga-option-item').removeClass('selected');
+                    if(newVal) {
+                        wrapper.find(`.aga-option-item[data-value='${newVal}']`).addClass('selected');
+                    }
+                }
+                // Kutunun üzerindeki yazıyı güncelle
+                updateTriggerText();
+            });
+
+
+            // --- F. Etkileşimler ---
+
+            // 1. Dropdown Aç/Kapa
             trigger.on('click', function(e) {
                 e.stopPropagation();
                 $('.aga-select-dropdown').not(dropdown).removeClass('active');
                 dropdown.toggleClass('active');
+                if(dropdown.hasClass('active')) {
+                    searchBox.focus();
+                }
             });
 
-            // Dışarı tıklayınca kapat
+            // 2. Dışarı tıklayınca kapat
             $(document).on('click', function() {
                 dropdown.removeClass('active');
             });
+            dropdown.on('click', function(e) { e.stopPropagation(); });
 
-            dropdown.on('click', function(e) {
-                e.stopPropagation();
-            });
-
-            // Arama
+            // 3. Arama Kutusu
             searchBox.on('keyup', function() {
                 const value = $(this).val().toLocaleLowerCase('tr-TR');
                 wrapper.find('.aga-option-item').filter(function() {
@@ -158,36 +233,52 @@
                 });
             });
 
-            // Tümünü Seç
-            selectAllBtn.on('click', function() {
-                const allChecked = checkboxes.length === checkboxes.filter(':checked').length;
-                checkboxes.prop('checked', !allChecked).trigger('change');
-            });
+            // --- G. Seçim İşlemleri (Moda Göre) ---
 
-            // Seçim Değişimi
-            checkboxes.on('change', function() {
-                const selectedValues = [];
-                const selectedTexts = [];
+            if (isMulti) {
+                // [ÇOKLU MOD]
+                const selectAllBtn = wrapper.find('.select-all-btn');
+                const checkboxes = wrapper.find('input[type="checkbox"]');
 
-                checkboxes.filter(':checked').each(function() {
-                    selectedValues.push($(this).val());
-                    selectedTexts.push($(this).attr('data-text'));
+                // Tümünü Seç
+                selectAllBtn.on('click', function() {
+                    const allChecked = checkboxes.length === checkboxes.filter(':checked').length;
+                    checkboxes.prop('checked', !allChecked).trigger('change');
                 });
 
-                originalSelect.val(selectedValues); // Backend'e giden veriyi güncelle
+                // Checkbox değişince
+                checkboxes.on('change', function() {
+                    const selectedValues = [];
+                    checkboxes.filter(':checked').each(function() {
+                        selectedValues.push($(this).val());
+                        $(this).closest('.aga-option-item').addClass('selected');
+                    });
 
-                if (selectedTexts.length > 0) {
-                    if (selectedTexts.length > 2) {
-                        trigger.text(selectedTexts.length + " kayıt seçildi");
-                    } else {
-                        trigger.text(selectedTexts.join(', '));
-                    }
-                    trigger.css('color', 'var(--text-color)');
-                } else {
-                    trigger.text("Seçiniz...");
-                    trigger.css('color', 'var(--text-muted)');
-                }
-            });
+                    checkboxes.not(':checked').closest('.aga-option-item').removeClass('selected');
+
+                    // Değeri güncelle ama trigger yapma (sonsuz döngü olmasın diye)
+                    originalSelect.val(selectedValues);
+                    updateTriggerText();
+                });
+
+            } else {
+                // [TEKLİ MOD]
+                const items = wrapper.find('.aga-option-item');
+
+                items.on('click', function() {
+                    const val = $(this).data('value');
+
+                    // Görsel güncelleme
+                    items.removeClass('selected');
+                    $(this).addClass('selected');
+
+                    // Orjinal select'i güncelle ve CHANGE olayını tetikle
+                    originalSelect.val(val).trigger('change');
+
+                    // Menüyü kapat
+                    dropdown.removeClass('active');
+                });
+            }
         });
 
     });

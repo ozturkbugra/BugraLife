@@ -1,0 +1,273 @@
+﻿@model IEnumerable<WebSitePassword>
+
+@{
+    ViewData["Title"] = "Şifrelerim";
+    // Controller'dan gelen Web Site listesini alıyoruz
+    var webSites = ViewBag.WebSites as IEnumerable<WebSite>;
+}
+@Html.AntiForgeryToken()
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-key-fill me-2"></i>Şifrelerim</h5>
+
+        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Şifre Ekle
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table datatable table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Web Sitesi</th>
+                        <th>Kullanıcı Adı</th>
+                        <th>Şifre</th>
+                        <th>Açıklama</th>
+                        <th>Tarih</th>
+                        <th width="100">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold text-primary">
+                                <i class="bi bi-globe2 me-1 text-muted"></i>
+                                @(item.WebSite?.website_name ?? "Belirtilmemiş")
+                            </td>
+                            <td>@item.websitepassword_username</td>
+                            <td>
+                                <code class="text-dark bg-light px-2 py-1 rounded border">@item.websitepassword_password</code>
+                            </td>
+                            <td>@item.websitepassword_description</td>
+                            <td class="small text-muted">@item.created_at.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-warning btn-sm text-white btn-edit"
+                                            data-id="@item.websitepassword_id"
+                                            data-website-id="@item.website_id"
+                                            data-username="@item.websitepassword_username"
+                                            data-password="@item.websitepassword_password"
+                                            data-desc="@item.websitepassword_description">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <button class="btn btn-danger btn-sm" onclick="deleteItem(@item.websitepassword_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-primary">Yeni Şifre Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createForm" method="post">
+                <div class="modal-body">
+
+                   <div class="mb-3">
+                        <label class="form-label">Web Sitesi</label>
+                        <select name="website_id" class="form-select aga-select" required>
+                            <option value="">Seçiniz...</option>
+                                                @if (webSites != null)
+                                                {
+                                                    foreach (var site in webSites)
+                                                    {
+                                            <option value="@site.website_id">@site.website_name</option>
+                                                    }
+                                                }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input type="text" name="websitepassword_username" class="form-control" required placeholder="Örn: bugra123">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <div class="input-group">
+                            <input type="text" name="websitepassword_password" class="form-control" required placeholder="******">
+                            <button class="btn btn-outline-secondary" type="button"><i class="bi bi-eye"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="websitepassword_description" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning">Şifre Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="websitepassword_id" id="edit_id">
+
+                    <input type="hidden" name="created_at" value="@DateTime.Now">
+
+                    <div class="mb-3">
+                        <label class="form-label">Web Sitesi</label>
+                        <select name="website_id" id="edit_website_id" class="form-select aga-select" required>
+                            <option value="">Seçiniz...</option>
+                            @if (webSites != null)
+                            {
+                                foreach (var site in webSites)
+                                {
+                                    <option value="@site.website_id">@site.website_name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input type="text" name="websitepassword_username" id="edit_username" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <input type="text" name="websitepassword_password" id="edit_password" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="websitepassword_description" id="edit_desc" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning text-white">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            // --- A. DÜZENLEME BUTONU ---
+                    $('.datatable').on('click', '.btn-edit', function() {
+            var id = $(this).data('id');
+            var websiteId = $(this).data('website-id');
+            var username = $(this).data('username');
+            var password = $(this).data('password');
+            var desc = $(this).data('desc');
+
+            $('#edit_id').val(id);
+
+            // BURASI DEĞİŞTİ: Değeri atadıktan sonra 'change' tetikliyoruz ki Aga Select güncellensin
+            $('#edit_website_id').val(websiteId).trigger('change');
+
+            $('#edit_username').val(username);
+            $('#edit_password').val(password);
+            $('#edit_desc').val(desc);
+
+            $('#editModal').modal('show');
+        });
+
+            // --- B. EKLEME (AJAX) ---
+            $('#createForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Passwords/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#createModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    }
+                });
+            });
+
+            // --- C. GÜNCELLEME (AJAX) ---
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Passwords/Edit',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    }
+                });
+            });
+        });
+
+        // --- D. SİLME ---
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu şifre kalıcı olarak silinecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Passwords/Delete',
+                        type: 'POST',
+                        data: { id: id, __RequestVerificationToken: token },
+                        success: function(response) {
+                            if (response.success) {
+                                showToast('success', response.message);
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        },
+                        error: function() {
+                             showToast('error', 'Silme işleminde hata oluştu.');
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}
