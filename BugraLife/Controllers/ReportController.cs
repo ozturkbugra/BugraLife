@@ -20,69 +20,80 @@ namespace BugraLife.Controllers
             return View();
         }
 
-        // Hesaplara Göre Hareketler Raporu
-        public async Task<IActionResult> AccountMovements(DateTime? startDate, DateTime? endDate, List<int> accountIds)
+        // ---------------------------------------------------------
+        // 1. HESAP HAREKETLERİ (GÜNCEL)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> AccountMovements(DateTime? startDate, DateTime? endDate, List<int> accountIds, List<int> personIds)
         {
             var model = new AccountMovementViewModel
             {
                 Movements = new List<MovementItem>(),
-                // Varsayılan Tarihler (Ayın başı ve sonu)
                 StartDate = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
                 EndDate = endDate ?? DateTime.Now,
-                SelectedAccountIds = accountIds ?? new List<int>()
+                SelectedAccountIds = accountIds ?? new List<int>(),
+                SelectedPersonIds = personIds ?? new List<int>()
             };
 
-            // Dropdown için hesapları doldur
             ViewBag.Accounts = await _context.PaymentTypes.Where(x=> x.is_bank == false).OrderBy(x => x.paymenttype_order).ToListAsync();
+            ViewBag.Persons = await _context.Persons.Where(x => x.is_bank == false).OrderBy(x => x.person_id).ToListAsync();
 
-            // Eğer hiç hesap seçilmediyse boş dön (veya hepsini getir, tercih senin. Ben boş dönüyorum)
-            if (accountIds == null || !accountIds.Any())
+            // Eğer hiç seçim yoksa işlem yapma (Sayfa ilk açıldığında boş gelsin)
+            // NOT: Kullanıcı "Tümü" seçerse listede -1 olacak, o yüzden count > 0 olacak.
+            if ((accountIds == null || !accountIds.Any()) && (personIds == null || !personIds.Any()))
             {
                 return View(model);
             }
 
-            // 1. GELİRLERİ ÇEK (Income)
-            var incomes = await _context.Incomes
-                .Include(x => x.PaymentType)
-                .Where(x => accountIds.Contains(x.paymenttype_id) &&
-                            x.income_date >= model.StartDate &&
-                            x.income_date <= model.EndDate)
-                .Select(x => new MovementItem
-                {
-                    Id = x.income_id,
-                    Date = x.income_date,
-                    AccountName = x.PaymentType.paymenttype_name,
-                    Description = x.income_description,
-                    Amount = x.income_amount,
-                    Type = "Gelir",
-                    IsExpense = false
-                }).ToListAsync();
+            // --- FİLTRE MANTIĞI ---
+            // Eğer listede -1 varsa "Tümü" seçilmiş demektir, filtreleme YAPMA (false).
+            // Yoksa ve liste doluysa filtrele (true).
+            bool filterByAccount = accountIds != null && accountIds.Any() && !accountIds.Contains(-1);
+            bool filterByPerson = personIds != null && personIds.Any() && !personIds.Contains(-1);
 
-            // 2. GİDERLERİ ÇEK (Expense)
-            var expenses = await _context.Expenses
+            // 1. GELİRLER
+            var incomesQuery = _context.Incomes
                 .Include(x => x.PaymentType)
-                .Where(x => accountIds.Contains(x.paymenttype_id) &&
-                            x.expense_date >= model.StartDate &&
-                            x.expense_date <= model.EndDate)
-                .Select(x => new MovementItem
-                {
-                    Id = x.expense_id,
-                    Date = x.expense_date,
-                    AccountName = x.PaymentType.paymenttype_name,
-                    Description = x.expense_description,
-                    Amount = x.expense_amount,
-                    Type = "Gider",
-                    IsExpense = true
-                }).ToListAsync();
+                .Include(x => x.Person)
+                .Where(x => x.income_date >= model.StartDate && x.income_date <= model.EndDate);
 
-            // 3. LİSTELERİ BİRLEŞTİR VE SIRALA
+            if (filterByAccount) incomesQuery = incomesQuery.Where(x => accountIds.Contains(x.paymenttype_id));
+            if (filterByPerson) incomesQuery = incomesQuery.Where(x => personIds.Contains(x.person_id));
+
+            var incomes = await incomesQuery.Select(x => new MovementItem
+            {
+                Id = x.income_id,
+                Date = x.income_date,
+                AccountName = x.PaymentType.paymenttype_name,
+                Description = x.income_description,
+                Amount = x.income_amount,
+                Type = "Gelir",
+                IsExpense = false
+            }).ToListAsync();
+
+            // 2. GİDERLER
+            var expensesQuery = _context.Expenses
+                .Include(x => x.PaymentType)
+                .Include(x => x.Person)
+                .Where(x => x.expense_date >= model.StartDate && x.expense_date <= model.EndDate);
+
+            if (filterByAccount) expensesQuery = expensesQuery.Where(x => accountIds.Contains(x.paymenttype_id));
+            if (filterByPerson) expensesQuery = expensesQuery.Where(x => personIds.Contains(x.person_id));
+
+            var expenses = await expensesQuery.Select(x => new MovementItem
+            {
+                Id = x.expense_id,
+                Date = x.expense_date,
+                AccountName = x.PaymentType.paymenttype_name,
+                Description = x.expense_description,
+                Amount = x.expense_amount,
+                Type = "Gider",
+                IsExpense = true
+            }).ToListAsync();
+
             model.Movements.AddRange(incomes);
             model.Movements.AddRange(expenses);
-
-            // Tarihe göre sırala (Yeniden eskiye)
             model.Movements = model.Movements.OrderByDescending(x => x.Date).ToList();
 
-            // 4. TOPLAMLARI HESAPLA
             model.TotalIncome = incomes.Sum(x => x.Amount);
             model.TotalExpense = expenses.Sum(x => x.Amount);
             model.NetBalance = model.TotalIncome - model.TotalExpense;
@@ -90,37 +101,38 @@ namespace BugraLife.Controllers
             return View(model);
         }
 
-        // Gider Türüne Göre Hareketler Raporu
-        public async Task<IActionResult> ExpenseTypeMovements(DateTime? startDate, DateTime? endDate, List<int> typeIds)
+        // ---------------------------------------------------------
+        // 2. GİDER TÜRÜ HAREKETLERİ (GÜNCEL)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> ExpenseTypeMovements(DateTime? startDate, DateTime? endDate, List<int> typeIds, List<int> personIds)
         {
             var model = new ExpenseTypeReportViewModel
             {
                 Items = new List<ExpenseReportItem>(),
-                // Varsayılan Tarihler: Ayın 1'i ve Şu an
                 StartDate = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
                 EndDate = endDate ?? DateTime.Now,
-                SelectedTypeIds = typeIds ?? new List<int>()
+                SelectedTypeIds = typeIds ?? new List<int>(),
+                SelectedPersonIds = personIds ?? new List<int>()
             };
 
-            // Dropdown için Gider Türlerini Çek
-            ViewBag.ExpenseTypes = await _context.ExpenseTypes
-                .OrderBy(x => x.expensetype_order) // Sıralı gelsin
-                .ToListAsync();
+            ViewBag.ExpenseTypes = await _context.ExpenseTypes.Where(x => x.is_bank == false).OrderBy(x => x.expensetype_order).ToListAsync();
+            ViewBag.Persons = await _context.Persons.Where(x => x.is_bank == false).OrderBy(x => x.person_id).ToListAsync();
 
-            // Eğer hiç seçim yapılmadıysa boş dön
-            if (typeIds == null || !typeIds.Any())
-            {
-                return View(model);
-            }
+            if ((typeIds == null || !typeIds.Any()) && (personIds == null || !personIds.Any())) return View(model);
 
-            // GİDERLERİ FİLTRELE
-            var expenses = await _context.Expenses
-                .Include(x => x.ExpenseType) // Tür Adı için
-                .Include(x => x.PaymentType) // Hesap Adı için
-                .Where(x => typeIds.Contains(x.expensetype_id) &&
-                            x.expense_date >= model.StartDate &&
-                            x.expense_date <= model.EndDate)
-                .OrderByDescending(x => x.expense_date) // Yeniden eskiye
+            // FİLTRE MANTIĞI (-1 kontrolü)
+            bool filterByType = typeIds != null && typeIds.Any() && !typeIds.Contains(-1);
+            bool filterByPerson = personIds != null && personIds.Any() && !personIds.Contains(-1);
+
+            var query = _context.Expenses
+                .Include(x => x.ExpenseType)
+                .Include(x => x.PaymentType)
+                .Where(x => x.expense_date >= model.StartDate && x.expense_date <= model.EndDate);
+
+            if (filterByType) query = query.Where(x => typeIds.Contains(x.expensetype_id));
+            if (filterByPerson) query = query.Where(x => personIds.Contains(x.person_id));
+
+            var expenses = await query.OrderByDescending(x => x.expense_date)
                 .Select(x => new ExpenseReportItem
                 {
                     Id = x.expense_id,
@@ -132,44 +144,43 @@ namespace BugraLife.Controllers
                 }).ToListAsync();
 
             model.Items = expenses;
-            model.TotalAmount = expenses.Sum(x => x.Amount); // Toplamı hesapla
+            model.TotalAmount = expenses.Sum(x => x.Amount);
 
             return View(model);
         }
 
-
-        // Gelir Türüne Göre Hareketler Raporu
-        public async Task<IActionResult> IncomeTypeMovements(DateTime? startDate, DateTime? endDate, List<int> typeIds)
+        // ---------------------------------------------------------
+        // 3. GELİR TÜRÜ HAREKETLERİ (GÜNCEL)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> IncomeTypeMovements(DateTime? startDate, DateTime? endDate, List<int> typeIds, List<int> personIds)
         {
             var model = new IncomeTypeReportViewModel
             {
                 Items = new List<IncomeReportItem>(),
-                // Varsayılan: Ayın 1'i ve Şu an
                 StartDate = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
                 EndDate = endDate ?? DateTime.Now,
-                SelectedTypeIds = typeIds ?? new List<int>()
+                SelectedTypeIds = typeIds ?? new List<int>(),
+                SelectedPersonIds = personIds ?? new List<int>()
             };
 
-            // Dropdown için Gelir Türlerini Çek
-            ViewBag.IncomeTypes = await _context.IncomeTypes
-                .Where(x=> x.is_bank == false)
-                .OrderBy(x => x.incometype_order)
-                .ToListAsync();
+            ViewBag.IncomeTypes = await _context.IncomeTypes.Where(x => x.is_bank == false).OrderBy(x => x.incometype_order).ToListAsync();
+            ViewBag.Persons = await _context.Persons.Where(x => x.is_bank == false).OrderBy(x => x.person_id).ToListAsync();
 
-            // Seçim yoksa boş dön
-            if (typeIds == null || !typeIds.Any())
-            {
-                return View(model);
-            }
+            if ((typeIds == null || !typeIds.Any()) && (personIds == null || !personIds.Any())) return View(model);
 
-            // GELİRLERİ FİLTRELE
-            var incomes = await _context.Incomes
-                .Include(x => x.IncomeType)  // Tür Adı
-                .Include(x => x.PaymentType) // Hesap Adı
-                .Where(x => typeIds.Contains(x.incometype_id) &&
-                            x.income_date >= model.StartDate &&
-                            x.income_date <= model.EndDate)
-                .OrderByDescending(x => x.income_date)
+            // FİLTRE MANTIĞI (-1 kontrolü)
+            bool filterByType = typeIds != null && typeIds.Any() && !typeIds.Contains(-1);
+            bool filterByPerson = personIds != null && personIds.Any() && !personIds.Contains(-1);
+
+            var query = _context.Incomes
+                .Include(x => x.IncomeType)
+                .Include(x => x.PaymentType)
+                .Where(x => x.income_date >= model.StartDate && x.income_date <= model.EndDate);
+
+            if (filterByType) query = query.Where(x => typeIds.Contains(x.incometype_id));
+            if (filterByPerson) query = query.Where(x => personIds.Contains(x.person_id));
+
+            var incomes = await query.OrderByDescending(x => x.income_date)
                 .Select(x => new IncomeReportItem
                 {
                     Id = x.income_id,

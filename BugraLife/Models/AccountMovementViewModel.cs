@@ -11,7 +11,7 @@
         public decimal TotalIncome { get; set; }
         public decimal TotalExpense { get; set; }
         public decimal NetBalance { get; set; } // Gelir - Gider
-
+        public List<int> SelectedPersonIds { get; set; } // Kişi Filtresi
         // Hareket Listesi
         public List<MovementItem> Movements { get; set; }
     }

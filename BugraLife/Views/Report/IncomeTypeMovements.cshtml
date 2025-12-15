@@ -18,15 +18,28 @@
             <form method="get" action="/Report/IncomeTypeMovements">
                 <div class="row align-items-end g-3">
 
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold">Gelir Türleri</label>
-                        <select class="aga-select" id="typeSelect" name="typeIds" multiple="multiple" required>
+                        <select class="aga-select" name="typeIds" multiple="multiple" required>
+                            <!option value="-1" @(Model.SelectedTypeIds.Contains(-1) ? "selected" : "")>TÜMÜ</!option>
+
                             @foreach (var item in ViewBag.IncomeTypes as List<IncomeType>)
                             {
                                 <!option value="@item.incometype_id"
                                 @(Model.SelectedTypeIds.Contains(item.incometype_id) ? "selected" : "")>
                                     @item.incometype_name
                                 </!option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Kişiler</label>
+                        <select class="aga-select" name="personIds" multiple="multiple">
+                            <!option value="-1" @(Model.SelectedPersonIds.Contains(-1) ? "selected" : "")>TÜMÜ</!option>
+                            @foreach (var item in ViewBag.Persons as List<Person>)
+                            {
+                                <!option value="@item.person_id" @(Model.SelectedPersonIds.Contains(item.person_id) ? "selected" : "")>@item.person_name</!option>
                             }
                         </select>
                     </div>

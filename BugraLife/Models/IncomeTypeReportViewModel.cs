@@ -7,6 +7,8 @@
         public DateTime EndDate { get; set; }
         public List<int> SelectedTypeIds { get; set; } // Çoklu seçim ID'leri
 
+        public List<int> SelectedPersonIds { get; set; } // Kişi Filtresi
+
         // Sonuçlar
         public decimal TotalAmount { get; set; } // Toplam Gelir
         public List<IncomeReportItem> Items { get; set; } // Satırlar
