@@ -19,7 +19,7 @@ namespace BugraLife.Controllers
         {
             // HEM KAYNAK HEM HEDEF OLABİLECEK HESAPLAR (Kredi Kartı OLMAYANLAR)
             var accounts = await _context.PaymentTypes
-                .Where(x => x.is_creditcard == false) // Sadece Nakit ve Banka
+                .Where(x => x.is_creditcard == false && x.is_bank == false) // Sadece Nakit ve Banka
                 .OrderBy(x => x.paymenttype_order)
                 .ToListAsync();
 

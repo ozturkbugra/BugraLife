@@ -35,19 +35,68 @@ namespace BugraLife.Controllers
         {
             if (ModelState.IsValid)
             {
+                // 1. İsim Kontrolü
                 bool exists = await _context.PaymentTypes.AnyAsync(x => x.paymenttype_name == paymentType.paymenttype_name);
-                if (exists)
+                if (exists) return Json(new { success = false, message = "Bu ödeme türü zaten kayıtlı!" });
+
+                // ------------------------------------------------------------
+                // ADIM A: HESABI OLUŞTUR
+                // ------------------------------------------------------------
+                _context.PaymentTypes.Add(paymentType);
+                await _context.SaveChangesAsync(); // Kaydet ki ID oluşsun (paymentType.paymenttype_id)
+
+                // ------------------------------------------------------------
+                // ADIM B: AÇILIŞ BAKİYESİ VARSA HAREKET OLUŞTUR
+                // ------------------------------------------------------------
+                if (paymentType.paymenttype_balance != 0)
                 {
-                    return Json(new { success = false, message = "Bu ödeme türü zaten kayıtlı!" });
+                    // Varsayılan Kişi ve Tür ID'lerini bul (Hata almamak için)
+                    // Sistemdeki ilk kaydı veya "Diğer" kategorisini alıyoruz.
+                    var defaultPersonId = await _context.Persons.Where(x=> x.is_bank == true).Select(x => x.person_id).FirstOrDefaultAsync();
+                    var defaultIncomeTypeId = await _context.IncomeTypes.Where(x => x.is_bank == true).Select(x => x.incometype_id).FirstOrDefaultAsync();
+                    var defaultExpenseTypeId = await _context.ExpenseTypes.Where(x => x.is_bank == true).Select(x => x.expensetype_id).FirstOrDefaultAsync();
+
+                    // Eğer veritabanı boşsa ve ID bulamazsa işlem yapma (Patlamasın)
+                    if (defaultPersonId != 0)
+                    {
+                        // DURUM 1: BAKİYE POZİTİF (+) İSE -> GELİR EKLE
+                        if (paymentType.paymenttype_balance > 0)
+                        {
+                            var income = new Income
+                            {
+                                paymenttype_id = paymentType.paymenttype_id,
+                                income_amount = paymentType.paymenttype_balance,
+                                income_date = DateTime.Now,
+                                income_description = "Hesap Açılış Bakiyesi",
+                                is_bankmovement = true, // Listede görünsün
+                                person_id = defaultPersonId,
+                                incometype_id = defaultIncomeTypeId != 0 ? defaultIncomeTypeId : 1
+                            };
+                            _context.Incomes.Add(income);
+                        }
+                        // DURUM 2: BAKİYE NEGATİF (-) İSE -> GİDER EKLE (Örn: Kredi Kartı Borcu)
+                        else
+                        {
+                            var expense = new Expense
+                            {
+                                paymenttype_id = paymentType.paymenttype_id,
+                                // Gider tablosuna tutar pozitif girilir (Math.Abs ile eksiği artı yap)
+                                expense_amount = Math.Abs(paymentType.paymenttype_balance),
+                                expense_date = DateTime.Now,
+                                expense_description = "Hesap Açılış Bakiyesi (Borç/Devir)",
+                                is_bankmovement = true, // Listede görünsün
+                                person_id = defaultPersonId,
+                                expensetype_id = defaultExpenseTypeId != 0 ? defaultExpenseTypeId : 1
+                            };
+                            _context.Expenses.Add(expense);
+                        }
+
+                        // Hareketi kaydet
+                        await _context.SaveChangesAsync();
+                    }
                 }
 
-                // --- DÜZELTME BURADA ---
-                // Kullanıcıdan bakiye almıyoruz, varsayılan 0 yapıyoruz.
-                paymentType.paymenttype_balance = 0;
-
-                _context.PaymentTypes.Add(paymentType);
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Hesap başarıyla oluşturuldu!" });
+                return Json(new { success = true, message = "Hesap ve açılış fişi oluşturuldu!" });
             }
             return Json(new { success = false, message = "Form verileri geçersiz." });
         }
