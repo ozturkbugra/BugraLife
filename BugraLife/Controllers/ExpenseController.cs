@@ -16,84 +16,110 @@ namespace BugraLife.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // 1. LİSTELEME
             var list = await _context.Expenses
                 .Include(x => x.ExpenseType)
                 .Include(x => x.PaymentType)
                 .Include(x => x.Person)
-                .Where(x => x.is_bankmovement == false) // Banka hareketleri hariç
-                .OrderByDescending(x => x.expense_date) // Tarihe göre tersten
+                .Where(x => x.is_bankmovement == false)
+                .OrderByDescending(x => x.expense_date)
                 .ToListAsync();
 
-            // --- DROPDOWN VERİLERİ ---
-
-            // 2. Gider Türleri: 
-            // Şart: is_bank == false
-            // Sıra: Order'a göre (String olma ihtimaline karşı int.TryParse ile güvenli sıralama)
-            var expenseTypes = await _context.ExpenseTypes
+            // Dropdownlar (is_bank == false olanlar)
+            ViewBag.ExpenseTypes = await _context.ExpenseTypes
                 .Where(x => x.is_bank == false)
+                .OrderBy(x => x.expensetype_name) // String sıralama güvenli olsun diye name kullandım, order string ise int.parse gerekebilir
                 .ToListAsync();
 
-            ViewBag.ExpenseTypes = expenseTypes
-                .OrderBy(x => int.TryParse(x.expensetype_order, out int v) ? v : 999)
-                .ToList();
-
-            // 3. Ödeme Türleri / Hesaplar:
-            // Şart: is_bank == false (Sadece nakit cüzdanlar vs.)
-            // Sıra: paymenttype_order
             ViewBag.PaymentTypes = await _context.PaymentTypes
-                .Where(x => x.is_bank == false)
-                .OrderBy(x => x.paymenttype_order)
-                .ToListAsync();
+                .Where(x => x.is_bank == false).OrderBy(x => x.paymenttype_order).ToListAsync();
 
-            // 4. Kişiler:
-            // Şart: is_bank == false
             ViewBag.Persons = await _context.Persons
-                .Where(x => x.is_bank == false)
-                .OrderBy(x => x.person_order)
-                .ToListAsync();
+                .Where(x => x.is_bank == false).OrderBy(x => x.person_order).ToListAsync();
 
             return View(list);
         }
 
+        // 2. EKLEME (BAKİYE AZALT)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Expense expense)
         {
             if (ModelState.IsValid)
             {
+                // 1. Hesap Bakiyesinden Düş (-)
+                var account = await _context.PaymentTypes.FindAsync(expense.paymenttype_id);
+                if (account != null)
+                {
+                    account.paymenttype_balance -= expense.expense_amount;
+                }
+
+                // 2. Gideri Kaydet
                 expense.is_bankmovement = false;
                 _context.Expenses.Add(expense);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Gider başarıyla kaydedildi." });
+
+                return Json(new { success = true, message = "Gider eklendi, bakiye düşüldü." });
             }
-            return Json(new { success = false, message = "Form verileri eksik." });
+            return Json(new { success = false, message = "Eksik bilgi." });
         }
 
+        // 3. GÜNCELLEME (ESKİYİ EKLE, YENİYİ ÇIKAR)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Expense expense)
         {
             if (ModelState.IsValid)
             {
+                // 1. Eski kaydı bul
+                var oldExpense = await _context.Expenses.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.expense_id == expense.expense_id);
+
+                if (oldExpense != null)
+                {
+                    // A. Eski tutarı hesaba geri iade et (+)
+                    var oldAccount = await _context.PaymentTypes.FindAsync(oldExpense.paymenttype_id);
+                    if (oldAccount != null)
+                    {
+                        oldAccount.paymenttype_balance += oldExpense.expense_amount;
+                    }
+
+                    // B. Yeni tutarı yeni hesaptan düş (-)
+                    var newAccount = await _context.PaymentTypes.FindAsync(expense.paymenttype_id);
+                    if (newAccount != null)
+                    {
+                        newAccount.paymenttype_balance -= expense.expense_amount;
+                    }
+                }
+
+                // 2. Güncelle
                 expense.is_bankmovement = false;
                 _context.Expenses.Update(expense);
                 await _context.SaveChangesAsync();
+
                 return Json(new { success = true, message = "Gider güncellendi." });
             }
             return Json(new { success = false, message = "Güncelleme başarısız." });
         }
 
+        // 4. SİLME (BAKİYE ARTIR - İADE)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var item = await _context.Expenses.FindAsync(id);
-            if (item != null)
+            var expense = await _context.Expenses.FindAsync(id);
+            if (expense != null)
             {
-                _context.Expenses.Remove(item);
+                // 1. Silinen gider tutarını hesaba geri ekle (+)
+                var account = await _context.PaymentTypes.FindAsync(expense.paymenttype_id);
+                if (account != null)
+                {
+                    account.paymenttype_balance += expense.expense_amount;
+                }
+
+                // 2. Sil
+                _context.Expenses.Remove(expense);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Kayıt silindi." });
+                return Json(new { success = true, message = "Gider silindi, tutar iade edildi." });
             }
             return Json(new { success = false, message = "Kayıt bulunamadı." });
         }
