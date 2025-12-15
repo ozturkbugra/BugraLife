@@ -197,19 +197,185 @@ namespace BugraLife.Controllers
             return View(model);
         }
 
-        public IActionResult DebtReceivableReport() // Borç Alacak Raporu
+        // ---------------------------------------------------------
+        // 4. BORÇ / ALACAK RAPORU (Ingredient Gruplu)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> DebtReceivableReport(DateTime? startDate, DateTime? endDate, List<int> debtorIds, List<int> ingredientIds)
         {
-            return View();
+            var model = new DebtReceivableViewModel
+            {
+                GroupedItems = new List<DebtGroupedItem>(),
+                Details = new List<Movement>(),
+                StartDate = startDate ?? new DateTime(DateTime.Now.Year, 1, 1), // Yıl başından
+                EndDate = endDate ?? DateTime.Now,
+                SelectedDebtorIds = debtorIds ?? new List<int>(),
+                SelectedIngredientIds = ingredientIds ?? new List<int>()
+            };
+
+            // Dropdown Verilerini Çek
+            ViewBag.Debtors = await _context.Debtors.OrderBy(x => x.debtor_name).ToListAsync();
+            ViewBag.Ingredients = await _context.Ingredients.OrderBy(x => x.ingredient_name).ToListAsync();
+
+            // Filtre seçimi yoksa boş dön (Tümü seçeneği -1 dahil)
+            if ((debtorIds == null || !debtorIds.Any()) && (ingredientIds == null || !ingredientIds.Any()))
+            {
+                return View(model);
+            }
+
+            // --- FİLTRE MANTIĞI (-1 Tümü Kontrolü) ---
+            bool filterByDebtor = debtorIds != null && debtorIds.Any() && !debtorIds.Contains(-1);
+            bool filterByIngredient = ingredientIds != null && ingredientIds.Any() && !ingredientIds.Contains(-1);
+
+            // 1. SORGUYU HAZIRLA
+            var query = _context.Movements
+                .Include(x => x.Debtor)
+                .Include(x => x.Ingredient)
+                .Include(x => x.Person)
+                .Where(x => x.movement_date >= model.StartDate && x.movement_date <= model.EndDate);
+
+            if (filterByDebtor) query = query.Where(x => debtorIds.Contains(x.debtor_id));
+            if (filterByIngredient) query = query.Where(x => ingredientIds.Contains(x.ingredient_id));
+
+            // Verileri Çek
+            var movements = await query.OrderByDescending(x => x.movement_date).ToListAsync();
+            model.Details = movements;
+
+            // 2. INGREDIENT'A GÖRE GRUPLA VE TOPLA
+            model.GroupedItems = movements
+                .GroupBy(x => x.Ingredient.ingredient_name)
+                .Select(g => new DebtGroupedItem
+                {
+                    IngredientName = g.Key,
+                    TotalAmount = g.Sum(x => x.movement_amount),
+                    Status = g.Sum(x => x.movement_amount) >= 0 ? "Alacak" : "Borç"
+                })
+                .ToList();
+
+            // 3. GENEL TOPLAMLARI HESAPLA (Sadece Para Birimi TL olanları toplamak mantıklı olabilir ama burada genel matematiksel toplam alıyoruz)
+            // Pozitifler Alacak, Negatifler Borç
+            model.TotalReceivable = movements.Where(x => x.movement_amount > 0).Sum(x => x.movement_amount);
+            model.TotalDebt = movements.Where(x => x.movement_amount < 0).Sum(x => x.movement_amount);
+            model.NetBalance = model.TotalReceivable + model.TotalDebt; // Borç eksi olduğu için topluyoruz
+
+            return View(model);
         }
 
-        public IActionResult PortfolioReport() // Portföy Raporu
+        // ---------------------------------------------------------
+        // 5. PORTFÖY / VARLIK RAPORU
+        // ---------------------------------------------------------
+        public async Task<IActionResult> PortfolioReport(DateTime? startDate, DateTime? endDate, List<int> ingredientIds, List<int> personIds)
         {
-            return View();
+            var model = new PortfolioReportViewModel
+            {
+                GroupedItems = new List<PortfolioGroupedItem>(),
+                Details = new List<Asset>(),
+                StartDate = startDate ?? new DateTime(DateTime.Now.Year, 1, 1), // Yıl başı varsayılan
+                EndDate = endDate ?? DateTime.Now,
+                SelectedIngredientIds = ingredientIds ?? new List<int>(),
+                SelectedPersonIds = personIds ?? new List<int>()
+            };
+
+            // Dropdown Verileri
+            ViewBag.Ingredients = await _context.Ingredients.OrderBy(x => x.ingredient_name).ToListAsync();
+            ViewBag.Persons = await _context.Persons.Where(x=> x.is_bank == false).OrderBy(x => x.person_id).ToListAsync();
+
+            // Seçim yoksa boş dön (-1 Tümü seçeneği dahil)
+            if ((ingredientIds == null || !ingredientIds.Any()) && (personIds == null || !personIds.Any()))
+            {
+                return View(model);
+            }
+
+            // --- FİLTRE MANTIĞI (-1 Kontrolü) ---
+            bool filterByIngredient = ingredientIds != null && ingredientIds.Any() && !ingredientIds.Contains(-1);
+            bool filterByPerson = personIds != null && personIds.Any() && !personIds.Contains(-1);
+
+            // 1. SORGU
+            var query = _context.Assets
+                .Include(x => x.Ingredient)
+                .Include(x => x.Person)
+                .Where(x => x.asset_date >= model.StartDate && x.asset_date <= model.EndDate);
+
+            if (filterByIngredient) query = query.Where(x => ingredientIds.Contains(x.ingredient_id));
+            if (filterByPerson) query = query.Where(x => personIds.Contains(x.person_id));
+
+            // Verileri Çek
+            var assets = await query.OrderByDescending(x => x.asset_date).ToListAsync();
+            model.Details = assets;
+
+            // 2. GRUPLAMA (Ingredient'a göre topla)
+            model.GroupedItems = assets
+                .GroupBy(x => x.Ingredient.ingredient_name)
+                .Select(g => new PortfolioGroupedItem
+                {
+                    IngredientName = g.Key,
+                    TotalAmount = g.Sum(x => x.asset_amount)
+                })
+                .ToList();
+
+            return View(model);
         }
 
-        public IActionResult AccountBalances() // Hesap Bakiyeleri
+        // ---------------------------------------------------------
+        // 6. HESAP BAKİYELERİ RAPORU (Tarihli Bakiye Durumu)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> AccountBalances(DateTime? filterDate)
         {
-            return View();
+            // Tarih seçilmediyse bugünü, seçildiyse o günün son saniyesini al (23:59:59)
+            var selectedDate = filterDate?.Date.AddDays(1).AddTicks(-1) ?? DateTime.Now;
+
+            var model = new AccountBalanceReportViewModel
+            {
+                FilterDate = selectedDate,
+                Accounts = new List<AccountBalanceItem>()
+            };
+
+            // 1. Tüm Hesapları Çek
+            var accounts = await _context.PaymentTypes.Where(x=> x.is_bank == false).ToListAsync();
+
+            // 2. O Tarihe Kadar Olan Tüm Gelir ve Giderleri Çek (Performans için tek sorguda çekip RAM'de işliyoruz)
+            var allIncomes = await _context.Incomes
+                .Where(x => x.income_date <= selectedDate)
+                .GroupBy(x => x.paymenttype_id)
+                .Select(g => new { AccId = g.Key, Total = g.Sum(x => x.income_amount) })
+                .ToListAsync();
+
+            var allExpenses = await _context.Expenses
+                .Where(x => x.expense_date <= selectedDate)
+                .GroupBy(x => x.paymenttype_id)
+                .Select(g => new { AccId = g.Key, Total = g.Sum(x => x.expense_amount) })
+                .ToListAsync();
+
+            // 3. Hesaplama Döngüsü
+            foreach (var acc in accounts)
+            {
+                // Gelir Toplamı (Varsa al, yoksa 0)
+                decimal totalInc = allIncomes.FirstOrDefault(x => x.AccId == acc.paymenttype_id)?.Total ?? 0;
+
+                // Gider Toplamı (Varsa al, yoksa 0)
+                decimal totalExp = allExpenses.FirstOrDefault(x => x.AccId == acc.paymenttype_id)?.Total ?? 0;
+
+                // Bakiye = Gelir - Gider
+                decimal calculatedBalance = totalInc - totalExp;
+
+                model.Accounts.Add(new AccountBalanceItem
+                {
+                    AccountName = acc.paymenttype_name,
+                    IsBank = acc.is_bank,
+                    IsCreditCard = acc.is_creditcard,
+                    Balance = calculatedBalance
+                });
+            }
+
+            // 4. Genel Toplamlar
+            // Varlıklar: Kredi kartı olmayan ve bakiyesi artı olanlar
+            model.TotalAssets = model.Accounts.Where(x => !x.IsCreditCard).Sum(x => x.Balance);
+
+            // Borçlar: Kredi kartları (Genelde eksi olur) veya eksiye düşmüş hesaplar
+            model.TotalLiabilities = model.Accounts.Where(x => x.IsCreditCard).Sum(x => x.Balance);
+
+            model.NetWorth = model.TotalAssets + model.TotalLiabilities; // Borç eksi olduğu için topluyoruz
+
+            return View(model);
         }
 
         public IActionResult IncomeExpenseReport() // Gelir Gider Raporu
