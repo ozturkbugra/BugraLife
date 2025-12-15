@@ -1,0 +1,239 @@
+﻿@model IEnumerable<BugraLife.Models.Location>
+
+@{
+    ViewData["Title"] = "Konumlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@Html.AntiForgeryToken()
+
+<div class="card shadow-sm border-0 mt-3">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-geo-alt-fill me-2"></i>Konum / Adres Listesi</h5>
+
+        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Konum Ekle
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table datatable table-hover table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Konum Adı</th>
+                        <th>Adres</th>
+                        <th>Harita</th>
+                        <th width="100">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@item.location_name</td>
+
+                            <td class="text-muted small" style="max-width: 300px;">@item.location_address</td>
+
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.location_link))
+                                {
+                                    <a href="@item.location_link" target="_blank" class="btn btn-outline-primary btn-sm border-0">
+                                        <i class="bi bi-map-fill"></i> Haritada Gör
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <button class="btn btn-warning btn-sm text-white btn-edit"
+                                            data-id="@item.location_id"
+                                            data-name="@item.location_name"
+                                            data-address="@item.location_address"
+                                            data-link="@item.location_link">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <button class="btn btn-danger btn-sm" onclick="deleteItem(@item.location_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-primary">Yeni Konum Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createForm" method="post">
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Konum Adı</label>
+                        <input type="text" name="location_name" class="form-control" required placeholder="Örn: Ev, Ofis, Depo...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Adres</label>
+                        <textarea name="location_address" class="form-control" rows="3" placeholder="Açık adres giriniz..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Harita Linki (Google Maps)</label>
+                        <input type="text" name="location_link" class="form-control" placeholder="https://goo.gl/maps/...">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning">Konum Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="location_id" id="edit_id">
+
+                    <div class="mb-3">
+                        <label class="form-label">Konum Adı</label>
+                        <input type="text" name="location_name" id="edit_name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Adres</label>
+                        <textarea name="location_address" id="edit_address" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Harita Linki</label>
+                        <input type="text" name="location_link" id="edit_link" class="form-control">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning text-white">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            // --- A. DÜZENLEME BUTONU ---
+            $('.datatable').on('click', '.btn-edit', function() {
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+                var address = $(this).data('address');
+                var link = $(this).data('link');
+
+                $('#edit_id').val(id);
+                $('#edit_name').val(name);
+                $('#edit_address').val(address);
+                $('#edit_link').val(link);
+
+                $('#editModal').modal('show');
+            });
+
+            // --- B. EKLEME (AJAX) ---
+            $('#createForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Location/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#createModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() { showToast('error', 'Hata oluştu.'); }
+                });
+            });
+
+            // --- C. GÜNCELLEME (AJAX) ---
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Location/Edit',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editModal').modal('hide');
+                            showToast('success', response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() { showToast('error', 'Hata oluştu.'); }
+                });
+            });
+        });
+
+        // --- D. SİLME ---
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu konum kaydı silinecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Location/Delete',
+                        type: 'POST',
+                        data: { id: id, __RequestVerificationToken: token },
+                        success: function(response) {
+                            if (response.success) {
+                                showToast('success', response.message);
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        }
+                    });
+                }
+            })
+        }
+    </script>
+}
