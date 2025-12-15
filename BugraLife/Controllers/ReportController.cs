@@ -378,9 +378,173 @@ namespace BugraLife.Controllers
             return View(model);
         }
 
-        public IActionResult IncomeExpenseReport() // Gelir Gider Raporu
+
+        // ---------------------------------------------------------
+        // 7. GENEL GELİR / GİDER RAPORU (ÖZET VE DAĞILIM)
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // 7. GENEL GELİR / GİDER RAPORU (ÖZET, DAĞILIM VE DETAY)
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // 7. GENEL GELİR / GİDER RAPORU (TAM VERSİYON)
+        // ---------------------------------------------------------
+        public async Task<IActionResult> IncomeExpenseReport(DateTime? startDate, DateTime? endDate, List<int> personIds)
         {
-            return View();
+            // 1. Model Başlangıç Ayarları
+            var model = new IncomeExpenseReportViewModel
+            {
+                StartDate = startDate ?? new DateTime(DateTime.Now.Year, 1, 1), // Yıl başından
+                EndDate = endDate ?? DateTime.Now,
+                SelectedPersonIds = personIds ?? new List<int>(),
+
+                IncomeCategories = new List<CategorySummary>(),
+                ExpenseCategories = new List<CategorySummary>(),
+                Details = new List<ReportMovementItem>(),
+                Timeline = new List<TimelineSummary>()
+            };
+
+            // Dropdown İçin Kişileri Doldur
+            ViewBag.Persons = await _context.Persons.Where(x=> x.is_bank == false).OrderBy(x => x.person_id).ToListAsync();
+
+            // 2. Filtreleme Mantığı ("Tümü" yani -1 seçildiyse filtreleme yapma)
+            bool filterByPerson = personIds != null && personIds.Any() && !personIds.Contains(-1);
+
+            // ========================================================================
+            // BÖLÜM A: GELİRLERİN ÇEKİLMESİ VE İŞLENMESİ
+            // ========================================================================
+            var incomeQuery = _context.Incomes
+                .Include(x => x.IncomeType)
+                .Include(x => x.PaymentType)
+                .Include(x => x.Person)
+                .Where(x => x.income_date >= model.StartDate && x.income_date <= model.EndDate);
+
+            if (filterByPerson)
+            {
+                incomeQuery = incomeQuery.Where(x => personIds.Contains(x.person_id));
+            }
+
+            var incomes = await incomeQuery.ToListAsync();
+            model.TotalIncome = incomes.Sum(x => x.income_amount);
+
+            // A-1. Kategori Bazlı Gruplama (Progress Bar İçin)
+            if (model.TotalIncome > 0)
+            {
+                model.IncomeCategories = incomes
+                    .GroupBy(x => x.IncomeType.incometype_name)
+                    .Select(g => new CategorySummary
+                    {
+                        Name = g.Key,
+                        Amount = g.Sum(x => x.income_amount),
+                        Percentage = (double)(g.Sum(x => x.income_amount) / model.TotalIncome) * 100
+                    })
+                    .OrderByDescending(x => x.Amount)
+                    .ToList();
+            }
+
+            // A-2. Detay Listesi Mapping
+            var incomeDetails = incomes.Select(x => new ReportMovementItem
+            {
+                Date = x.income_date,
+                CategoryName = x.IncomeType?.incometype_name ?? "Diğer",
+                AccountName = x.PaymentType?.paymenttype_name ?? "-",
+                PersonName = x.Person?.person_name ?? "-",
+                Description = x.income_description,
+                Amount = x.income_amount,
+                IsExpense = false // Gelir (Yeşil)
+            });
+
+            // ========================================================================
+            // BÖLÜM B: GİDERLERİN ÇEKİLMESİ VE İŞLENMESİ
+            // ========================================================================
+            var expenseQuery = _context.Expenses
+                .Include(x => x.ExpenseType)
+                .Include(x => x.PaymentType)
+                .Include(x => x.Person)
+                .Where(x => x.expense_date >= model.StartDate && x.expense_date <= model.EndDate);
+
+            if (filterByPerson)
+            {
+                expenseQuery = expenseQuery.Where(x => personIds.Contains(x.person_id));
+            }
+
+            var expenses = await expenseQuery.ToListAsync();
+            model.TotalExpense = expenses.Sum(x => x.expense_amount);
+
+            // B-1. Kategori Bazlı Gruplama (Progress Bar İçin)
+            if (model.TotalExpense > 0)
+            {
+                model.ExpenseCategories = expenses
+                    .GroupBy(x => x.ExpenseType.expensetype_name)
+                    .Select(g => new CategorySummary
+                    {
+                        Name = g.Key,
+                        Amount = g.Sum(x => x.expense_amount),
+                        Percentage = (double)(g.Sum(x => x.expense_amount) / model.TotalExpense) * 100
+                    })
+                    .OrderByDescending(x => x.Amount)
+                    .ToList();
+            }
+
+            // B-2. Detay Listesi Mapping
+            var expenseDetails = expenses.Select(x => new ReportMovementItem
+            {
+                Date = x.expense_date,
+                CategoryName = x.ExpenseType?.expensetype_name ?? "Diğer",
+                AccountName = x.PaymentType?.paymenttype_name ?? "-",
+                PersonName = x.Person?.person_name ?? "-",
+                Description = x.expense_description,
+                Amount = x.expense_amount,
+                IsExpense = true // Gider (Kırmızı)
+            });
+
+            // ========================================================================
+            // BÖLÜM C: BİRLEŞTİRME VE SONUÇ
+            // ========================================================================
+
+            // Listeleri Birleştir ve Sırala
+            model.Details.AddRange(incomeDetails);
+            model.Details.AddRange(expenseDetails);
+            model.Details = model.Details.OrderByDescending(x => x.Date).ToList();
+
+            // Net Kar/Zarar
+            model.NetResult = model.TotalIncome - model.TotalExpense;
+
+            // ========================================================================
+            // BÖLÜM D: TARİH BAZLI GRAFİK VERİSİ (TREND ANALİZİ)
+            // ========================================================================
+
+            // Günlük Gruplamalar
+            var incomeByDate = incomes
+                .GroupBy(x => x.income_date.Date)
+                .Select(g => new { Date = g.Key, Total = g.Sum(x => x.income_amount) })
+                .ToList();
+
+            var expenseByDate = expenses
+                .GroupBy(x => x.expense_date.Date)
+                .Select(g => new { Date = g.Key, Total = g.Sum(x => x.expense_amount) })
+                .ToList();
+
+            // Tüm tarihleri birleştir (Union) ve sırala
+            var allDates = incomeByDate.Select(x => x.Date)
+                           .Union(expenseByDate.Select(x => x.Date))
+                           .OrderBy(x => x)
+                           .ToList();
+
+            foreach (var date in allDates)
+            {
+                var inc = incomeByDate.FirstOrDefault(x => x.Date == date)?.Total ?? 0;
+                var exp = expenseByDate.FirstOrDefault(x => x.Date == date)?.Total ?? 0;
+
+                model.Timeline.Add(new TimelineSummary
+                {
+                    DateLabel = date.ToString("dd.MM.yyyy"),
+                    DailyIncome = inc,
+                    DailyExpense = exp,
+                    DailyNet = inc - exp
+                });
+            }
+
+            return View(model);
         }
     }
 }
