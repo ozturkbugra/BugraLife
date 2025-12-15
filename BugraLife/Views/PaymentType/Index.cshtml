@@ -16,14 +16,14 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table datatable table-hover table-striped align-middle">
+            <table class="table datatable table-hover align-middle">
                 <thead>
                     <tr>
-                        <th width="50">Sıra</th>
-                        <th>Hesap Adı</th>
-                        <th>Tür</th>
-                        <th class="text-end">Mevcut Bakiye</th>
-                        <th width="100">İşlemler</th>
+                        <th width="50" class="text-secondary">Sıra</th>
+                        <th class="text-secondary">Hesap Adı</th>
+                        <th class="text-secondary">Hesap Türü</th>
+                        <th class="text-end text-secondary">Mevcut Bakiye</th>
+                        <th width="100" class="text-secondary">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,16 +34,16 @@
                             <td class="fw-bold">@item.paymenttype_name</td>
 
                             <td>
-                                @if (item.is_bank)
+                                @if (item.is_creditcard)
                                 {
-                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
-                                        <i class="bi bi-bank me-1"></i> Banka
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                                        <i class="bi bi-credit-card me-1"></i> Kredi Kartı
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
-                                        <i class="bi bi-wallet2 me-1"></i> Cüzdan / Nakit
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                        <i class="bi bi-wallet2 me-1"></i> Standart Hesap / Nakit
                                     </span>
                                 }
                             </td>
@@ -59,7 +59,7 @@
                                             data-name="@item.paymenttype_name"
                                             data-balance="@item.paymenttype_balance"
                                             data-order="@item.paymenttype_order"
-                                            data-bank="@item.is_bank">
+                                            data-creditcard="@item.is_creditcard">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
 
@@ -86,14 +86,17 @@
             <form id="createForm" method="post">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Hesap / Ödeme Türü Adı</label>
-                        <input type="text" name="paymenttype_name" class="form-control" required placeholder="Örn: Kredi Kartı, Nakit Kasa...">
+                        <label class="form-label">Hesap Adı</label>
+                        <input type="text" name="paymenttype_name" class="form-control" required placeholder="Örn: Bonus Card, Nakit Kasa...">
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3 border p-3 rounded bg-secondary bg-opacity-10 d-flex align-items-center justify-content-between">
+                        <div>
+                            <label class="form-check-label fw-bold" for="create_is_creditcard">Bu bir Kredi Kartı mı?</label>
+                            <div class="small text-muted">İşaretlemezseniz normal hesap (Nakit/Banka) olur.</div>
+                        </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="is_bank" value="true" id="create_is_bank">
-                            <label class="form-check-label" for="create_is_bank">Bu bir Banka Hesabı mı?</label>
+                            <input class="form-check-input" type="checkbox" name="is_creditcard" value="true" id="create_is_creditcard" style="transform: scale(1.3);">
                         </div>
                     </div>
 
@@ -123,20 +126,21 @@
                     <input type="hidden" name="paymenttype_id" id="edit_id">
 
                     <div class="mb-3">
-                        <label class="form-label">Hesap / Ödeme Türü Adı</label>
+                        <label class="form-label">Hesap Adı</label>
                         <input type="text" name="paymenttype_name" id="edit_name" class="form-control" required>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Bakiye (Düzeltme)</label>
-                            <input type="number" step="0.01" name="paymenttype_balance" id="edit_balance" class="form-control">
+                    <div class="mb-3">
+                        <label class="form-label">Bakiye (Manuel Düzeltme)</label>
+                        <input type="number" step="0.01" name="paymenttype_balance" id="edit_balance" class="form-control">
+                    </div>
+
+                    <div class="mb-3 border p-3 rounded bg-secondary bg-opacity-10 d-flex align-items-center justify-content-between">
+                        <div>
+                            <label class="form-check-label fw-bold" for="edit_is_creditcard">Bu bir Kredi Kartı mı?</label>
                         </div>
-                        <div class="col-md-6 mb-3 d-flex align-items-center">
-                            <div class="form-check form-switch mt-4">
-                                <input class="form-check-input" type="checkbox" name="is_bank" value="true" id="edit_is_bank">
-                                <label class="form-check-label" for="edit_is_bank">Banka Hesabı</label>
-                            </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_creditcard" value="true" id="edit_is_creditcard" style="transform: scale(1.3);">
                         </div>
                     </div>
 
@@ -158,20 +162,20 @@
     <script>
         $(document).ready(function() {
 
-            // --- A. DÜZENLEME BUTONU ---
+            // A. DÜZENLEME BUTONU
             $('.datatable').on('click', '.btn-edit', function() {
                 var id = $(this).data('id');
                 var name = $(this).data('name');
                 var balance = $(this).data('balance');
                 var order = $(this).data('order');
 
-                var isBank = $(this).data('bank') === "True" || $(this).data('bank') === true;
+                // Sadece is_creditcard verisini alıyoruz
+                var isCredit = $(this).data('creditcard') === "True" || $(this).data('creditcard') === true;
 
                 $('#edit_id').val(id);
                 $('#edit_name').val(name);
                 $('#edit_order').val(order);
 
-                // Bakiye
                 if(balance) {
                     var parsedBalance = balance.toString().replace(',', '.');
                     $('#edit_balance').val(parsedBalance);
@@ -179,12 +183,13 @@
                     $('#edit_balance').val(0);
                 }
 
-                $('#edit_is_bank').prop('checked', isBank);
+                // Checkbox'ı işaretle
+                $('#edit_is_creditcard').prop('checked', isCredit);
 
                 $('#editModal').modal('show');
             });
 
-            // --- B. EKLEME (AJAX) ---
+            // B. EKLEME (AJAX)
             $('#createForm').submit(function(e) {
                 e.preventDefault();
                 var formData = $(this).serialize();
@@ -198,13 +203,12 @@
                             $('#createModal').modal('hide');
                             showToast('success', response.message);
 
-                            // Form temizleme
+                            // Temizlik
                             var currentVal = parseInt($('#create_order').val()) || 0;
                             $('#create_order').val(currentVal + 1);
-
                             $('input[name="paymenttype_name"]').val('');
-                            // Bakiye inputu olmadığı için temizlemeye gerek yok
-                            $('#create_is_bank').prop('checked', false);
+                            // Checkbox'ı sıfırla
+                            $('#create_is_creditcard').prop('checked', false);
 
                             setTimeout(() => location.reload(), 1000);
                         } else {
@@ -215,10 +219,17 @@
                 });
             });
 
-            // --- C. GÜNCELLEME (AJAX) ---
+            // C. GÜNCELLEME (AJAX)
             $('#editForm').submit(function(e) {
                 e.preventDefault();
+                // Checkbox seçili değilse formda false gitmesi için ek işlem gerekebilir ama
+                // ASP.NET Core genelde checkbox işaretli değilse false kabul eder.
+                // Garanti olsun diye serialize işini kontrol edelim.
+
                 var formData = $(this).serialize();
+
+                // Eğer checkbox işaretli değilse formData içinde "is_creditcard" hiç gitmeyebilir.
+                // Bu durumda Controller false kabul eder. Sorun yok.
 
                 $.ajax({
                     url: '/PaymentType/Edit',
@@ -238,11 +249,11 @@
             });
         });
 
-        // --- D. SİLME ---
+        // D. SİLME
         function deleteItem(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
-                text: "Bu hesap silinecek! İçindeki bakiye bilgisi kaybolabilir.",
+                text: "Bu hesap silinecek!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
