@@ -1,5 +1,5 @@
 ﻿@using System.Globalization
-@model IEnumerable<BugraLife.Models.Income>
+@model IEnumerable<Income>
 
 @{
     ViewData["Title"] = "Gelirler";
@@ -112,7 +112,7 @@
                             <option value="">Seçiniz...</option>
                             @if (ViewBag.Persons != null)
                             {
-                                foreach (var p in ViewBag.Persons as List<BugraLife.Models.Person>)
+                                foreach (var p in ViewBag.Persons as List<Person>)
                                 {
                                     <option value="@p.person_id">@p.person_name</option>
                                 }
@@ -127,7 +127,7 @@
                                 <option value="">Seçiniz...</option>
                                 @if (ViewBag.IncomeTypes != null)
                                 {
-                                    foreach (var it in ViewBag.IncomeTypes as List<BugraLife.Models.IncomeType>)
+                                    foreach (var it in ViewBag.IncomeTypes as List<IncomeType>)
                                     {
                                         <option value="@it.incometype_id">@it.incometype_name</option>
                                     }
@@ -140,7 +140,7 @@
                                 <option value="">Seçiniz...</option>
                                 @if (ViewBag.PaymentTypes != null)
                                 {
-                                    foreach (var pt in ViewBag.PaymentTypes as List<BugraLife.Models.PaymentType>)
+                                    foreach (var pt in ViewBag.PaymentTypes as List<PaymentType>)
                                     {
                                         <option value="@pt.paymenttype_id">@pt.paymenttype_name</option>
                                     }
@@ -192,7 +192,7 @@
                             <option value="">Seçiniz...</option>
                             @if (ViewBag.Persons != null)
                             {
-                                foreach (var p in ViewBag.Persons as List<BugraLife.Models.Person>)
+                                foreach (var p in ViewBag.Persons as List<Person>)
                                 {
                                     <option value="@p.person_id">@p.person_name</option>
                                 }
@@ -207,7 +207,7 @@
                                 <option value="">Seçiniz...</option>
                                 @if (ViewBag.IncomeTypes != null)
                                 {
-                                    foreach (var it in ViewBag.IncomeTypes as List<BugraLife.Models.IncomeType>)
+                                    foreach (var it in ViewBag.IncomeTypes as List<IncomeType>)
                                     {
                                         <option value="@it.incometype_id">@it.incometype_name</option>
                                     }
@@ -220,7 +220,7 @@
                                 <option value="">Seçiniz...</option>
                                 @if (ViewBag.PaymentTypes != null)
                                 {
-                                    foreach (var pt in ViewBag.PaymentTypes as List<BugraLife.Models.PaymentType>)
+                                    foreach (var pt in ViewBag.PaymentTypes as List<PaymentType>)
                                     {
                                         <option value="@pt.paymenttype_id">@pt.paymenttype_name</option>
                                     }
