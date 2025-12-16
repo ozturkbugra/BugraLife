@@ -49,7 +49,9 @@ using (var scope = app.Services.CreateScope())
             {
                 loginuser_username = "bugra",
                 loginuser_namesurname = "Buðra Öztürk",
-                login_password = hashedPassword
+                login_password = hashedPassword,
+                IsTwoFactorEnabled = false,
+                TwoFactorSecretKey = null
             };
 
             context.LoginUser.Add(adminUser);
