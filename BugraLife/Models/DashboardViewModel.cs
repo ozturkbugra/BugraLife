@@ -7,6 +7,8 @@
         public List<FixedExpenseStatus> FixedExpenseStatuses { get; set; }
 
         public List<AccountStatus> Accounts { get; set; }
+
+        public List<PlannedToDo> PendingToDos { get; set; }
     }
 
     public class FixedExpenseStatus
