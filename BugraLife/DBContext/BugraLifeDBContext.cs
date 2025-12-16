@@ -29,6 +29,8 @@ namespace BugraLife.DBContext
         public DbSet<Location> Locations { get; set; }
         public DbSet<Movement> Movements { get; set; }
         public DbSet<FixedExpense> FixedExpenses { get; set; }
+        public DbSet<ActivityDefinition> ActivityDefinitions { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
 
 
     }
