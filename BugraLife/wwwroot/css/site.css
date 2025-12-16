@@ -605,3 +605,17 @@ table.dataTable, .table {
     border-top: 4px solid #d63384 !important;
 }
 /* Pembe */
+
+
+.list-group-item.active-menu {
+    background-color: #ffc107 !important; /* Warning Sarısı */
+    color: #000 !important; /* Siyah Yazı */
+    border-left: 5px solid #fff !important; /* Soluna beyaz çizgi */
+    font-weight: bold;
+    opacity: 1 !important;
+}
+
+/* Aktif olan Accordion Başlığı */
+.dropdown-toggle.active-parent {
+    color: #ffc107 !important; /* Sarı yazı */
+}

@@ -1,7 +1,7 @@
 ﻿<script>
-        /* =========================================================
-       BugraLife Admin Panel - Ana JavaScript Dosyası (FULL SÜRÜM)
-       ========================================================= */
+    /* =========================================================
+    BugraLife Admin Panel - Ana JavaScript Dosyası (FULL SÜRÜM)
+    ========================================================= */
 
     // 1. GLOBAL TOAST FONKSİYONU (Her yerden erişilebilir)
     function showToast(icon, title) {
@@ -33,12 +33,50 @@
             $("#wrapper").toggleClass("toggled");
         });
 
-        // Menüde Arama (Türkçe Karakter Destekli)
-        $("#menu-search-input").on("keyup", function() {
-            var value = $(this).val().toLocaleLowerCase('tr-TR');
-            $("#sidebar-menu .menu-item").filter(function() {
-                $(this).toggle($(this).text().toLocaleLowerCase('tr-TR').indexOf(value) > -1)
+        // --- AKILLI MENÜ ARAMA (Accordion Destekli) ---
+        $('#menu-search-input').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+
+            // Tüm menü elemanlarını (linkleri) kontrol et
+            $('.list-group-item').filter(function() {
+                // Linkin metnini al
+                var text = $(this).text().toLowerCase();
+                var isMatch = text.indexOf(value) > -1;
+
+                // Eğer arama kutusu boşsa her şeyi eski haline getir
+                if (value === "") {
+                    $('.collapse').removeClass('show'); // Alt menüleri kapat
+
+                    // Sadece ana başlıkları ve accordion içinde olmayanları göster
+                    // (Bu mantık basit tutulmuştur, CSS yapına göre otomatik düzelir)
+                    $(this).toggle(true);
+
+                    // Alt menü elemanlarını tekrar gizlemek gerekebilir ama
+                    // collapse sınıfı zaten onları gizleyecektir.
+                    return;
+                }
+
+                // Eşleşme varsa
+                if (isMatch) {
+                    $(this).toggle(true);
+
+                    // Eğer bu eleman bir alt menünün içindeyse, o alt menüyü AÇ
+                    $(this).closest('.collapse').addClass('show');
+
+                    // Bu alt menünün başlığını da (Accordion Header) görünür yap
+                    var collapseId = $(this).closest('.collapse').attr('id');
+                    if(collapseId) {
+                        $('a[href="#' + collapseId + '"]').toggle(true);
+                    }
+
+                } else {
+                    // Eşleşme yoksa gizle
+                    $(this).toggle(false);
+                }
             });
+
+            // Eğer bir grup başlığı (accordion header) arama sonucu boşsa ve altındakiler de boşsa onu gizle
+            // Bu biraz karmaşık olabilir, şimdilik yukarıdaki mantık işini görür.
         });
 
 
@@ -281,5 +319,41 @@
             }
         });
 
+
+        var currentUrl = window.location.pathname.toLowerCase();
+
+        // Eğer kök dizindeysek (/), /Home varsayalım
+        if (currentUrl === "/" || currentUrl === "") currentUrl = "/home";
+
+        $("#sidebar-menu .menu-item").each(function() {
+            var linkUrl = $(this).attr("href").toLowerCase();
+
+            // Eşleşme Mantığı:
+            // 1. Tam Eşleşme: /Activity == /Activity
+            // 2. Alt Sayfa Eşleşmesi: /Activity/Create sayfası da /Activity linkini yaksın
+            // (Ancak /Home linki, /Home/Index dışında başka sayfaları yakmasın diye kontrol ekledik)
+
+            if (currentUrl === linkUrl || (currentUrl.startsWith(linkUrl) && linkUrl !== "/home" && linkUrl !== "/")) {
+
+                // 1. Linki Aktif Yap (Sarı Arkaplan)
+                $(this).addClass("active-menu");
+                $(this).removeClass("bg-transparent second-text"); // Eski şeffaf stili kaldır
+
+                // 2. Eğer bu link bir alt menünün (Accordion) içindeyse...
+                var parentCollapse = $(this).closest(".collapse");
+                if (parentCollapse.length > 0) {
+
+                    // A. Menüyü Aç
+                    parentCollapse.addClass("show");
+
+                    // B. Menü Başlığını (Örn: Finansal İşlemler) Renklendir
+                    var parentId = parentCollapse.attr("id");
+                    var parentToggle = $('a[href="#' + parentId + '"]');
+                    parentToggle.addClass("active-parent");
+                    parentToggle.removeClass("collapsed"); // Ok yönünü düzelt
+                    parentToggle.attr("aria-expanded", "true");
+                }
+            }
+        });
     });
 </script>
