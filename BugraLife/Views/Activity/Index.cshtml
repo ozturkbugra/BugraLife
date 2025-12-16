@@ -227,6 +227,13 @@
                     center: 'title',
                     right: 'dayGridMonth,dayGridWeek'
                 },
+                  buttonText: {
+                    today: 'Bugün',
+                    month: 'Ay',
+                    week: 'Hafta',
+                    day: 'Gün',
+                    list: 'Liste'
+                },
                 initialView: 'dayGridMonth',
                 locale: 'tr',
                 firstDay: 1,
@@ -234,6 +241,10 @@
                 droppable: true,
                 events: '/Activity/GetCalendarEvents',
 
+              
+
+
+             
                 // A. EVENT BIRAKILDI (CREATE LOG)
                 // "eventReceive" drop işleminden sonra oluşan event'i yakalar
                 eventReceive: function(info) {
