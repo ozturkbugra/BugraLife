@@ -59,14 +59,55 @@ namespace BugraLife.Controllers
                 });
             }
 
-            // Listeyi Sırala: Ödenmeyenler ve Gecikenler en üstte olsun
+          
+
+            var paymentTypes = await _context.PaymentTypes.Where(x=> x.is_bank == false).OrderBy(x => x.paymenttype_order).ToListAsync();
+
+            // Bugüne kadar olan Gelirleri çekip grupla
+            var incomes = await _context.Incomes
+                .Where(x => x.income_date.Date <= today) // GELECEK DAHİL DEĞİL
+                .GroupBy(x => x.paymenttype_id)
+                .Select(g => new { Id = g.Key, Total = g.Sum(x => x.income_amount) })
+                .ToListAsync();
+
+            // Bugüne kadar olan Giderleri çekip grupla
+            var expenses = await _context.Expenses
+                .Where(x => x.expense_date.Date <= today) // GELECEK DAHİL DEĞİL
+                .GroupBy(x => x.paymenttype_id)
+                .Select(g => new { Id = g.Key, Total = g.Sum(x => x.expense_amount) })
+                .ToListAsync();
+
+            var accountStatuses = new List<AccountStatus>();
+
+            foreach (var pt in paymentTypes)
+            {
+                // Hesaplama: (Toplam Gelir) - (Toplam Gider)
+                // paymenttype_balance (başlangıç bakiyesi) sütununu kullanmıyoruz, sen istemiştin.
+
+                decimal totalInc = incomes.FirstOrDefault(x => x.Id == pt.paymenttype_id)?.Total ?? 0;
+                decimal totalExp = expenses.FirstOrDefault(x => x.Id == pt.paymenttype_id)?.Total ?? 0;
+                decimal currentBalance = totalInc - totalExp;
+
+                string typeName = "Kasa (Nakit)";
+                if (pt.is_creditcard) typeName = "Kredi Kartı";
+                else if (pt.is_bank) typeName = "Banka Hesabı";
+
+                accountStatuses.Add(new AccountStatus
+                {
+                    AccountName = pt.paymenttype_name,
+                    Balance = currentBalance,
+                    Type = typeName,
+                    IsCreditCard = pt.is_creditcard
+                });
+            }
+
+            // ViewModel'i Doldur
             var model = new DashboardViewModel
             {
-                FixedExpenseStatuses = statusList
-                    .OrderBy(x => x.IsPaid) // Önce Ödenmeyenler (False)
-                    .ThenBy(x => x.DaysDiff) // Sonra günü geçenler (Negatifler)
-                    .ToList()
+                FixedExpenseStatuses = statusList.OrderBy(x => x.IsPaid).ThenBy(x => x.DaysDiff).ToList(),
+                Accounts = accountStatuses
             };
+
 
             return View(model);
         }

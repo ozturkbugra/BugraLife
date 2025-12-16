@@ -5,6 +5,8 @@
         // Diğer dashboard verileri (Toplam bakiye vs.) buraya eklenebilir.
         // Biz şimdilik sabit gider listesine odaklanıyoruz.
         public List<FixedExpenseStatus> FixedExpenseStatuses { get; set; }
+
+        public List<AccountStatus> Accounts { get; set; }
     }
 
     public class FixedExpenseStatus
@@ -15,5 +17,13 @@
         public bool IsPaid { get; set; }        // Ödendi mi?
         public int DaysDiff { get; set; }       // Pozitif: Kaldı, Negatif: Geçti
         public DateTime DueDate { get; set; }   // Son Ödeme Tarihi
+    }
+
+    public class AccountStatus
+    {
+        public string AccountName { get; set; }
+        public decimal Balance { get; set; }
+        public string Type { get; set; } // "Kasa", "Banka", "Kredi Kartı"
+        public bool IsCreditCard { get; set; }
     }
 }

@@ -591,3 +591,17 @@ table.dataTable, .table {
 .border-wait {
     border-left: 5px solid #ffc107 !important;
 }
+
+
+.border-acc-cash {
+    border-top: 4px solid #0dcaf0 !important;
+}
+/* Mavi */
+.border-acc-bank {
+    border-top: 4px solid #6610f2 !important;
+}
+/* Mor */
+.border-acc-card {
+    border-top: 4px solid #d63384 !important;
+}
+/* Pembe */
