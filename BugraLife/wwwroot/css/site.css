@@ -567,3 +567,27 @@ table.dataTable, .table {
     }
 
 
+/* ANA SAYFA */
+
+/* Kartların Genel Yapısı */
+.status-card {
+    border: 1px solid #373b3e;
+    transition: transform 0.3s;
+}
+
+    .status-card:hover {
+        transform: translateY(-5px);
+    }
+
+/* Durumlara Göre Kenarlık Renkleri */
+.border-paid {
+    border-left: 5px solid #198754 !important;
+}
+/* Yeşil */
+.border-late {
+    border-left: 5px solid #dc3545 !important;
+}
+/* Kırmızı */
+.border-wait {
+    border-left: 5px solid #ffc107 !important;
+}
