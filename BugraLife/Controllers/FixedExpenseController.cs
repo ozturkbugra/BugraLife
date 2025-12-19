@@ -2,9 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using BugraLife.DBContext;
 using BugraLife.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class FixedExpenseController : Controller
     {
         private readonly BugraLifeDBContext _context;

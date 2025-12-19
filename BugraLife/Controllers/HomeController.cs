@@ -2,13 +2,16 @@
 using Microsoft.EntityFrameworkCore;
 using BugraLife.DBContext;
 using BugraLife.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly BugraLifeDBContext _context;
 
+      
         public HomeController(BugraLifeDBContext context)
         {
             _context = context;

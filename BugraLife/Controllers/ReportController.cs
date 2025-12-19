@@ -2,9 +2,11 @@
 using BugraLife.DBContext;
 using BugraLife.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class ReportController : Controller
     {
         private readonly BugraLifeDBContext _context;

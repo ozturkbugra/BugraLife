@@ -2,9 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using BugraLife.Models;
 using BugraLife.DBContext;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class UnPlannedToDoController : Controller
     {
         private readonly BugraLifeDBContext _context;

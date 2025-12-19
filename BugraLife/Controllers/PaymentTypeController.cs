@@ -2,9 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using BugraLife.Models;
 using BugraLife.DBContext;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class PaymentTypeController : Controller
     {
         private readonly BugraLifeDBContext _context;

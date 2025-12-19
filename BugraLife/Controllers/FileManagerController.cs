@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BugraLife.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class FileManagerController : Controller
     {
         private readonly IWebHostEnvironment _env;

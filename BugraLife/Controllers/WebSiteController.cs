@@ -1,10 +1,12 @@
 ﻿using BugraLife.DBContext;
 using BugraLife.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BugraLife.Controllers
 {
+    [Authorize]
     public class WebSiteController : Controller
     {
         private readonly BugraLifeDBContext _context;

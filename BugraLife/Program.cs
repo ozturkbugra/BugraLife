@@ -2,6 +2,7 @@ using BugraLife.DBContext;
 using BugraLife.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,13 +12,22 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Login/Index"; // Giriþ yapmamýþ kiþi buraya atýlsýn
-        options.ExpireTimeSpan = TimeSpan.FromDays(365); // Çerez 30 gün kalsýn
-        options.SlidingExpiration = true; // Kullanýcý siteye girdikçe süre uzasýn
+        options.Cookie.Name = "BugraLife_Auth"; // Sabit bir isim ver
+        options.LoginPath = "/Login/Index";
+        options.ExpireTimeSpan = TimeSpan.FromDays(365);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true; // Kritik: GDPR/Çerez politikasýna takýlmasýn
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
 builder.Services.AddDbContext<BugraLifeDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "Keys")))
+    .SetApplicationName("BugraLifeApp");
 
 var app = builder.Build();
 
