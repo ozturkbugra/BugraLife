@@ -32,9 +32,22 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td class="fw-bold text-primary">
-                                <i class="bi bi-globe2 me-1 text-muted"></i>
-                                @(item.WebSite?.website_name ?? "Belirtilmemiş")
+                            <td class="fw-bold">
+                                @if (!string.IsNullOrEmpty(item.WebSite?.website_url))
+                                {
+                                    <a href="@item.WebSite.website_url" target="_blank" class="text-primary text-decoration-none d-flex align-items-center">
+                                        <i class="bi bi-globe2 me-2"></i>
+                                        @item.WebSite.website_name
+                                        <i class="bi bi-box-arrow-up-right ms-1 text-secondary" style="font-size: 0.75rem;"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted d-flex align-items-center">
+                                        <i class="bi bi-globe2 me-2"></i>
+                                        @(item.WebSite?.website_name ?? "Belirtilmemiş")
+                                    </span>
+                                }
                             </td>
                             <td>@item.websitepassword_username</td>
                             <td>
