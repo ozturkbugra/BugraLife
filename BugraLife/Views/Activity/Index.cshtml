@@ -73,6 +73,19 @@
         background-color: #ffc107 !important;
         border-color: #ffc107 !important;
     }
+    /* --- UZUN YAZILAR İÇİN SATIR ATLATMA AYARI --- */
+    .fc-event {
+        white-space: normal !important; /* Metni alt satıra indir */
+        height: auto !important; /* Kutuyu içeriğe göre uzat */
+        display: block !important; /* Blok element gibi davran */
+        align-items: center; /* İçeriği ortala (isteğe bağlı) */
+    }
+
+    .fc-event-main {
+        white-space: normal !important;
+        overflow-wrap: break-word; /* Çok uzun kelimeleri böl */
+        padding: 2px; /* Biraz nefes payı */
+    }
 
     
 </style>
@@ -138,7 +151,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label text-secondary">Aktivite Adı</label>
-                        <input type="text" name="name" class="form-control bg-secondary  border-0" required placeholder="Örn: 30dk Yürüyüş">
+                        <input type="text" name="name" class="form-control border-0" required placeholder="Örn: 30dk Yürüyüş">
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-secondary">Renk Seç</label>

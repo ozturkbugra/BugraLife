@@ -46,6 +46,14 @@
         border-radius: 4px;
         padding: 2px 4px;
         font-size: 0.8rem;
+        white-space: normal !important; /* Metnin alt satıra kaymasını sağlar */
+        height: auto !important; /* Kutunun boyunu içeriğe göre uzatır */
+        display: block !important
+    }
+
+    .fc-event-main {
+        white-space: normal !important;
+        overflow-wrap: break-word; /* Çok uzun kelime varsa (örn: aaaaa...) onu da böler */
     }
 
     .fc-event-todo {
