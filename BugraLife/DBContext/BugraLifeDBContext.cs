@@ -31,6 +31,7 @@ namespace BugraLife.DBContext
         public DbSet<FixedExpense> FixedExpenses { get; set; }
         public DbSet<ActivityDefinition> ActivityDefinitions { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<PracticalNote> PracticalNotes { get; set; }
 
 
     }
