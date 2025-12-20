@@ -109,15 +109,92 @@ namespace BugraLife.Controllers
         {
             if (ModelState.IsValid)
             {
+                // 1. İsim Çakışma Kontrolü
                 bool exists = await _context.PaymentTypes.AnyAsync(x => x.paymenttype_name == paymentType.paymenttype_name && x.paymenttype_id != paymentType.paymenttype_id);
                 if (exists)
                 {
                     return Json(new { success = false, message = "Bu isimde başka bir kayıt zaten mevcut!" });
                 }
 
-                _context.PaymentTypes.Update(paymentType);
+                // 2. Mevcut Kaydı Veritabanından Çek (Değişiklikleri üzerine yazacağız)
+                var existingRecord = await _context.PaymentTypes.FindAsync(paymentType.paymenttype_id);
+                if (existingRecord == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                // --- BAKİYE DÜZELTME MANTIĞI BAŞLANGIÇ ---
+
+                // A. Şu anki gerçek bakiyeyi hesapla (Gelirler - Giderler)
+                var totalIncome = await _context.Incomes
+                    .Where(x => x.paymenttype_id == paymentType.paymenttype_id)
+                    .SumAsync(x => x.income_amount);
+
+                var totalExpense = await _context.Expenses
+                    .Where(x => x.paymenttype_id == paymentType.paymenttype_id)
+                    .SumAsync(x => x.expense_amount);
+
+                decimal currentRealBalance = totalIncome - totalExpense;
+
+                // B. Kullanıcının girdiği hedef bakiye
+                decimal targetBalance = paymentType.paymenttype_balance;
+
+                // C. Aradaki Fark (Hedef - Mevcut)
+                decimal difference = targetBalance - currentRealBalance;
+
+                // D. Fark varsa Düzeltme Kaydı Oluştur
+                if (difference != 0)
+                {
+                    // Varsayılan Kişi ve Kategori ID'lerini bul (Create metodundaki gibi)
+                    var defaultPersonId = await _context.Persons.Where(x => x.is_bank == true).Select(x => x.person_id).FirstOrDefaultAsync();
+                    var defaultIncomeTypeId = await _context.IncomeTypes.Where(x => x.is_bank == true).Select(x => x.incometype_id).FirstOrDefaultAsync();
+                    var defaultExpenseTypeId = await _context.ExpenseTypes.Where(x => x.is_bank == true).Select(x => x.expensetype_id).FirstOrDefaultAsync();
+
+                    if (defaultPersonId != 0)
+                    {
+                        if (difference > 0)
+                        {
+                            // Bakiye artmalı -> GELİR EKLE
+                            var income = new Income
+                            {
+                                paymenttype_id = paymentType.paymenttype_id,
+                                income_amount = difference, // Pozitif fark
+                                income_date = DateTime.Now,
+                                income_description = "Bakiye Düzeltme Fişi (Manuel)",
+                                is_bankmovement = true,
+                                person_id = defaultPersonId,
+                                incometype_id = defaultIncomeTypeId != 0 ? defaultIncomeTypeId : 1
+                            };
+                            _context.Incomes.Add(income);
+                        }
+                        else
+                        {
+                            // Bakiye azalmalı -> GİDER EKLE
+                            var expense = new Expense
+                            {
+                                paymenttype_id = paymentType.paymenttype_id,
+                                expense_amount = Math.Abs(difference), // Gider pozitif girilir
+                                expense_date = DateTime.Now,
+                                expense_description = "Bakiye Düzeltme Fişi (Manuel)",
+                                is_bankmovement = true,
+                                person_id = defaultPersonId,
+                                expensetype_id = defaultExpenseTypeId != 0 ? defaultExpenseTypeId : 1
+                            };
+                            _context.Expenses.Add(expense);
+                        }
+                    }
+                }
+                // --- BAKİYE DÜZELTME MANTIĞI BİTİŞ ---
+
+                // 3. Diğer Alanları Güncelle
+                existingRecord.paymenttype_name = paymentType.paymenttype_name;
+                existingRecord.paymenttype_order = paymentType.paymenttype_order;
+                existingRecord.is_creditcard = paymentType.is_creditcard;
+
+                // paymenttype_balance sütununu da güncelleyelim ama asıl işi Income/Expense tabloları yapıyor
+                existingRecord.paymenttype_balance = targetBalance;
+
+                _context.PaymentTypes.Update(existingRecord);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Güncelleme başarılı!" });
+
+                return Json(new { success = true, message = "Güncelleme ve bakiye eşitleme başarılı!" });
             }
             return Json(new { success = false, message = "Güncelleme başarısız." });
         }

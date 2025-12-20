@@ -68,6 +68,63 @@ using (var scope = app.Services.CreateScope())
             context.SaveChanges();
 
         }
+
+        if (!context.IncomeTypes.Where(x => x.is_bank == true).Any())
+        {
+            var it = new IncomeType
+            {
+                incometype_name = "BANKA HAREKETÝ",
+                is_bank = true,
+                incometype_order = 0,
+            };
+            context.IncomeTypes.Add(it);
+            context.SaveChanges();
+        }
+
+        if (!context.ExpenseTypes.Where(x=> x.is_bank == true).Any())
+        {
+            var et = new ExpenseType
+            {
+                expensetype_name = "BANKA HAREKETÝ",
+                is_bank = true,
+                expensetype_order = "0",
+                description = "",
+            };
+
+            context.ExpenseTypes.Add(et);
+            context.SaveChanges();
+        }
+
+        if (!context.PaymentTypes.Where(x=> x.is_bank == true).Any())
+        {
+            var pt = new PaymentType
+            {
+                paymenttype_name = "BANKA HAREKETÝ",
+                is_bank = true,
+                paymenttype_order = 0,
+                is_creditcard = false,
+                paymenttype_balance = 0,
+            };
+
+            context.PaymentTypes.Add(pt);
+            context.SaveChanges();
+        }
+
+        if (!context.Persons.Where(x=> x.is_bank == true).Any())
+        {
+            var p = new Person
+            {
+                person_name = "BANKA HAREKETÝ",
+                is_bank = true,
+                person_order = 0,
+            };
+
+            context.Persons.Add(p);
+            context.SaveChanges();
+        }
+
+
+
     }
     catch (Exception ex)
     {
