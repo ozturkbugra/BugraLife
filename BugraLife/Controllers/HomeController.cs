@@ -104,20 +104,28 @@ namespace BugraLife.Controllers
                 });
             }
 
+          
+
+            var tomorrow = DateTime.Today.AddDays(1);
+
+            // 2. Sorguyu Güncelle: (Yapılmamış OLANLAR) VE (Tarihi BUGÜN VEYA ÖNCESİ OLANLAR ... VEYA ... YARIN OLANLAR)
             var toDos = await _context.PlannedToDos
-            .Where(x => x.plannedtodo_done == false && x.plannedtodo_date.Date <= today)
-            .OrderBy(x => x.plannedtodo_date) // En eski tarih en üstte (Aciliyet sırası)
-            .ToListAsync();
+                .Where(x => x.plannedtodo_done == false &&
+                           (x.plannedtodo_date.Date <= today || x.plannedtodo_date.Date == tomorrow))
+                .OrderBy(x => x.plannedtodo_date) // Eskiler en üste, yarınkiler en alta
+                .ToListAsync();
 
             // ViewModel'i Doldur
             var model = new DashboardViewModel
             {
                 FixedExpenseStatuses = statusList.OrderBy(x => x.IsPaid).ThenBy(x => x.DaysDiff).ToList(),
                 Accounts = accountStatuses,
-                PendingToDos = toDos // YENİ
+                PendingToDos = toDos
             };
 
             return View(model);
+
+          
 
             
         }
