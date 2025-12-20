@@ -265,5 +265,46 @@ namespace BugraLife.Controllers
                 _ => "bi-file-earmark-fill text-light"
             };
         }
+
+
+        // =========================================================================
+        // 3. PARÇALI DOSYA YÜKLEME (CHUNK UPLOAD) - KESİN ÇÖZÜM
+        // =========================================================================
+        [HttpPost]
+        [DisableRequestSizeLimit]
+        [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]
+        public async Task<IActionResult> UploadChunk(string currentPath, IFormFile chunk, string fileName, int chunkIndex, int totalChunks)
+        {
+            try
+            {
+                var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+                var targetFolder = Path.Combine(rootPath, currentPath ?? "");
+
+                if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
+
+                if (!Path.GetFullPath(targetFolder).StartsWith(rootPath))
+                    return Json(new { success = false, message = "Geçersiz yol." });
+
+                var filePath = Path.Combine(targetFolder, fileName);
+
+                // 1. Eğer ilk parçaysa (chunkIndex == 0) ve dosya varsa, eskisini sil (veya üzerine yazmaya başla)
+                if (chunkIndex == 0 && System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+
+                // 2. Gelen parçayı dosyanın sonuna EKLE (Append Mode)
+                using (var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None))
+                {
+                    await chunk.CopyToAsync(stream);
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

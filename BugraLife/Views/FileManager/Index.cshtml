@@ -200,21 +200,18 @@
 
 @section Scripts {
     <script>
-        // 1. SİLME İŞLEMİ (SWEETALERT)
+        // 1. SİLME İŞLEMİ (AYNI)
         function deleteItem(path, type) {
             event.stopPropagation();
             event.preventDefault();
-
             Swal.fire({
                 title: 'Silinsin mi?',
                 text: `Bu ${type} kalıcı olarak silinecek!`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
-                cancelButtonText: 'Vazgeç',
-                confirmButtonText: 'Evet, Sil',
-                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b36' : '#fff',
-                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#fff' : '#333'
+                cancelButtonText: 'Vazgeç', confirmButtonText: 'Evet, Sil',
+                background: '#252b36', color: '#fff'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $('#deletePath').val(path);
@@ -223,89 +220,102 @@
             });
         }
 
-        // 2. AJAX İLE DOSYA YÜKLEME VE PROGRESS BAR
+        // =========================================================
+        // 2. PARÇALI YÜKLEME (CHUNK UPLOAD) MANTIĞI
+        // =========================================================
         $(document).ready(function() {
-            $('#uploadForm').submit(function(e) {
-                e.preventDefault(); // Sayfanın yenilenmesini engelle
+            
+            // Sabitler
+            const CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB (Sunucuyu hiç yormaz)
+            let isUploading = false;
 
-                var formData = new FormData(this);
+            $('#uploadForm').submit(async function(e) {
+                e.preventDefault();
+
                 var btn = $('#btnUpload');
                 var fileInput = $('#fileInput');
-                
-                // Dosya seçildi mi?
-                if (fileInput.get(0).files.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Dosya Seçilmedi',
-                        text: 'Lütfen yüklenecek dosyaları seçin.',
-                        background: '#252b36', color: '#fff'
-                    });
+                var files = fileInput.get(0).files;
+                var currentPath = $('input[name="currentPath"]').val();
+
+                if (files.length === 0) {
+                    Swal.fire({ icon: 'warning', title: 'Dosya Yok', text: 'Lütfen dosya seçin.', background: '#252b36', color: '#fff' });
                     return;
                 }
 
-                // UI Kilitleme
+                // UI Kilitle
+                isUploading = true;
                 btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Yükleniyor...');
                 $('#closeUploadModal').prop('disabled', true);
                 $('#progress-container').slideDown();
-
-                // Progress Bar Sıfırla
-                $('#progress-bar').css('width', '0%').removeClass('bg-success').addClass('bg-warning');
-                $('#progress-text').text('0%');
-                $('#upload-status-text').text('Yükleniyor...');
-
-                $.ajax({
-                    url: '/FileManager/UploadFile',
-                    type: 'POST',
-                    data: formData,
-                    contentType: false, // Multipart form data için false
-                    processData: false, // jQuery işlemesin
-                    xhr: function() {
-                        var xhr = new window.XMLHttpRequest();
-                        // Yükleme (Upload) ilerlemesini dinle
-                        xhr.upload.addEventListener("progress", function(evt) {
-                            if (evt.lengthComputable) {
-                                var percentComplete = Math.round((evt.loaded / evt.total) * 100);
-                                
-                                $('#progress-bar').css('width', percentComplete + '%');
-                                $('#progress-text').text(percentComplete + '%');
-
-                                if (percentComplete === 100) {
-                                    $('#upload-status-text').text('Sunucuya yazılıyor...');
-                                    $('#progress-bar').removeClass('bg-warning').addClass('bg-success');
-                                }
-                            }
-                        }, false);
-                        return xhr;
-                    },
-                    success: function(response) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Başarılı',
-                            text: 'Dosyalar başarıyla yüklendi.',
-                            timer: 1500,
-                            showConfirmButton: false,
-                            background: '#252b36', color: '#fff'
-                        }).then(() => {
-                            location.reload(); // Listeyi güncellemek için yenile
-                        });
-                    },
-                    error: function(xhr, status, error) {
-                        $('#progress-container').hide();
-                        btn.prop('disabled', false).html('<i class="bi bi-cloud-upload me-1"></i> Yüklemeyi Başlat');
-                        $('#closeUploadModal').prop('disabled', false);
-                        
-                        var errMsg = "Yükleme sırasında bir hata oluştu.";
-                        if (xhr.status === 413) errMsg = "Dosya boyutu çok büyük (Server Limit).";
-                        
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Hata',
-                            text: errMsg,
-                            background: '#252b36', color: '#fff'
-                        });
+                
+                // --- DOSYALARI SIRAYLA YÜKLE ---
+                for (let i = 0; i < files.length; i++) {
+                    let file = files[i];
+                    
+                    try {
+                        await uploadFileInChunks(file, currentPath);
+                    } catch (error) {
+                        console.error(error);
+                        Swal.fire({ icon: 'error', title: 'Hata', text: 'Yükleme sırasında hata oluştu: ' + file.name, background: '#252b36', color: '#fff' });
+                        resetUI();
+                        return;
                     }
-                });
+                }
+
+                // Hepsi Bitti
+                Swal.fire({
+                    icon: 'success', title: 'Tamamlandı', text: 'Tüm dosyalar başarıyla yüklendi.',
+                    timer: 1500, showConfirmButton: false, background: '#252b36', color: '#fff'
+                }).then(() => location.reload());
             });
+
+            // --- TEK BİR DOSYAYI PARÇALAYIP GÖNDEREN FONKSİYON ---
+            async function uploadFileInChunks(file, currentPath) {
+                let totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                let start = 0;
+                let chunkIndex = 0;
+
+                // Dosya adı güncelleme
+                $('#upload-status-text').text('Yükleniyor: ' + file.name);
+
+                while (start < file.size) {
+                    let end = Math.min(start + CHUNK_SIZE, file.size);
+                    let chunk = file.slice(start, end); // Dosyadan 1 dilim al
+
+                    let formData = new FormData();
+                    formData.append('chunk', chunk);
+                    formData.append('fileName', file.name);
+                    formData.append('currentPath', currentPath);
+                    formData.append('chunkIndex', chunkIndex);
+                    formData.append('totalChunks', totalChunks);
+
+                    // Parçayı Gönder (Promise ile bekle)
+                    await $.ajax({
+                        url: '/FileManager/UploadChunk',
+                        type: 'POST',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        // Hata olursa döngüyü kırar ve catch bloğuna düşer
+                    });
+
+                    // İlerleme Çubuğunu Güncelle
+                    let percent = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+                    $('#progress-bar').css('width', percent + '%');
+                    $('#progress-text').text(percent + '%');
+
+                    // Sonraki parçaya geç
+                    start = end;
+                    chunkIndex++;
+                }
+            }
+
+            function resetUI() {
+                isUploading = false;
+                $('#btnUpload').prop('disabled', false).html('<i class="bi bi-cloud-upload me-1"></i> Yüklemeyi Başlat');
+                $('#closeUploadModal').prop('disabled', false);
+                $('#progress-container').hide();
+            }
         });
     </script>
 }
