@@ -381,4 +381,83 @@
         if ($(window).width() > 768) {
              $("#menu-search-input").focus();
         }
+
+
+        function loadFavorites() {
+            var favs = JSON.parse(localStorage.getItem('bugraLifeFavs')) || [];
+            var listHtml = '';
+            var currentPath = window.location.pathname;
+
+            if (favs.length === 0) {
+                $('#favorites-list').html('<li class="text-center text-muted small py-2">Henüz favori yok.</li>');
+                $('#fav-count').hide();
+            } else {
+                favs.forEach(function(item, index) {
+                    listHtml += `
+                        <li class="d-flex justify-content-between align-items-center px-3 py-1 mb-1">
+                            <a class="dropdown-item rounded text-truncate px-2" href="${item.url}" style="font-size: 0.9rem;">
+                                <i class="bi bi-bookmark-fill text-primary me-2 opacity-50"></i>${item.title}
+                            </a>
+                            <button class="btn btn-link text-danger btn-sm p-0 ms-2" onclick="removeFavorite(${index}); event.stopPropagation();">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </li>
+                    `;
+                });
+                $('#favorites-list').html(listHtml);
+                $('#fav-count').text(favs.length).show();
+            }
+
+            // Şu anki sayfa favorilerde mi kontrol et?
+            var exists = favs.some(f => f.url === currentPath);
+            updateFavButton(exists);
+        }
+
+        // B. Buton Görünümünü Güncelle
+        function updateFavButton(isFav) {
+            var btn = $('#btn-toggle-fav');
+            if (isFav) {
+                btn.removeClass('btn-outline-warning').addClass('btn-danger');
+                btn.html('<i class="bi bi-trash me-1"></i> Favoriden Çıkar');
+            } else {
+                btn.removeClass('btn-danger').addClass('btn-outline-warning');
+                btn.html('<i class="bi bi-star-fill me-1"></i> Bu Sayfayı Ekle');
+            }
+        }
+
+        // C. Ekle / Çıkar İşlemi (Current Page)
+        $('#btn-toggle-fav').click(function(e) {
+            e.stopPropagation(); // Menü kapanmasın
+
+            var favs = JSON.parse(localStorage.getItem('bugraLifeFavs')) || [];
+            var currentPath = window.location.pathname;
+            var currentTitle = document.title.replace(' - BugraLife Panel', ''); // Sadece sayfa adını al
+
+            var existingIndex = favs.findIndex(f => f.url === currentPath);
+
+            if (existingIndex > -1) {
+                // Varsa çıkar
+                favs.splice(existingIndex, 1);
+                showToast('info', 'Favorilerden çıkarıldı.');
+            } else {
+                // Yoksa ekle
+                favs.push({ title: currentTitle, url: currentPath });
+                showToast('success', 'Favorilere eklendi.');
+            }
+
+            localStorage.setItem('bugraLifeFavs', JSON.stringify(favs));
+            loadFavorites();
+        });
+
+        // D. Listeden Silme (Global Fonksiyon)
+        window.removeFavorite = function(index) {
+            var favs = JSON.parse(localStorage.getItem('bugraLifeFavs')) || [];
+            favs.splice(index, 1);
+            localStorage.setItem('bugraLifeFavs', JSON.stringify(favs));
+            loadFavorites();
+            showToast('info', 'Silindi.');
+        };
+
+        // Sayfa açılınca yükle
+        loadFavorites();
 </script>

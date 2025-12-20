@@ -152,6 +152,32 @@
                     </button>
 
                     <div class="dropdown">
+                        <button class="btn btn-light rounded-circle border-0 shadow-sm position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 40px; height: 40px;">
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="fav-count" style="font-size: 0.6rem; display:none;">
+                                0
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="width: 300px; max-height: 400px; overflow-y: auto;">
+                            <li>
+                                <h6 class="dropdown-header fw-bold text-uppercase small">Hızlı Erişim</h6>
+                            </li>
+
+                            <li class="px-3 mb-2">
+                                <button class="btn btn-sm btn-outline-warning w-100 fw-bold" id="btn-toggle-fav">
+                                    <i class="bi bi-star me-1"></i> Bu Sayfayı Ekle
+                                </button>
+                            </li>
+
+                            <li><hr class="dropdown-divider"></li>
+
+                            <div id="favorites-list">
+                            <li class="text-center text-muted small py-2">Henüz favori yok.</li>
+                    </div>
+                    </ul>
+                </div>
+
+                    <div class="dropdown">
                         <div class="d-flex align-items-center gap-3" data-bs-toggle="dropdown" style="cursor:pointer">
                             <div class="text-end d-none d-md-block">
                                 <div style="font-weight:600; font-size:0.9rem;">@User.Identity?.Name</div>

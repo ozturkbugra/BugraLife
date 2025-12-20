@@ -662,3 +662,16 @@ table.dataTable, .table {
     padding-left: 2.5rem !important;
     font-size: 0.95rem;
 }
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] .form-select::placeholder {
+    color: #e0e0e0 !important; /* Tam beyaz (#fff) yerine hafif kırık beyaz daha şık durur */
+    opacity: 1 !important; /* Firefox gibi tarayıcılar varsayılan olarak şeffaf yapar, bunu engeller */
+}
+
+/* Eğer özel arama kutun varsa (Search Box) onun için de garanti olsun */
+[data-theme="dark"] .search-box input::placeholder {
+    color: #ced4da !important;
+}
