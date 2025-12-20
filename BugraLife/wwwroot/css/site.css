@@ -619,3 +619,46 @@ table.dataTable, .table {
 .dropdown-toggle.active-parent {
     color: #ffc107 !important; /* Sarı yazı */
 }
+
+/* Sidebar Scrollbar Özelleştirme */
+#sidebar-wrapper {
+    overflow-y: auto; /* Dikey kaydırma */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #6c757d #212529; /* Scroll ve arka plan rengi */
+}
+
+    /* Chrome, Edge, Safari için Scrollbar */
+    #sidebar-wrapper::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #sidebar-wrapper::-webkit-scrollbar-track {
+        background: #2c3034;
+    }
+
+    #sidebar-wrapper::-webkit-scrollbar-thumb {
+        background-color: #6c757d;
+        border-radius: 10px;
+        border: 2px solid #2c3034;
+    }
+
+/* Accordion Menü Stilleri */
+.sidebar-group-header {
+    color: #adb5bd;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 15px 20px 5px 20px;
+    font-weight: 600;
+}
+
+.dropdown-toggle::after {
+    float: right;
+    margin-top: 8px;
+}
+
+/* Alt menüler için girinti */
+.collapse .list-group-item {
+    padding-left: 2.5rem !important;
+    font-size: 0.95rem;
+}

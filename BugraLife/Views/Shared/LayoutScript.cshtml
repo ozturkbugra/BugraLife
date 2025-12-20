@@ -356,4 +356,29 @@
             }
         });
     });
+
+    $(document).on('keydown', function(e) {
+            // Eğer odak zaten bir input, textarea veya select üzerindeyse veya CTRL/ALT tuşlarına basılıysa karışma
+            if ($(e.target).is('input, textarea, select') || e.ctrlKey || e.altKey || e.metaKey) {
+                return;
+            }
+
+            // Basılan tuş bir harf (A-Z) veya sayı (0-9) ise
+            // (KeyCode kontrolü yerine key length kontrolü daha modern ve evrenseldir)
+            if (e.key.length === 1) {
+                var searchInput = $("#menu-search-input");
+
+                // Arama kutusuna odaklan
+                searchInput.focus();
+
+                // Eğer mobil menü kapalıysa ve mobildeysek aç (Opsiyonel)
+                if ($(window).width() <= 768 && !$("#wrapper").hasClass("toggled")) {
+                }
+            }
+        });
+
+        // Sayfa ilk yüklendiğinde de (Eğer masaüstüyse) direkt odaklan
+        if ($(window).width() > 768) {
+             $("#menu-search-input").focus();
+        }
 </script>
