@@ -33,6 +33,34 @@
             $("#wrapper").toggleClass("toggled");
         });
 
+        if (localStorage.getItem('sidebar-state') === 'closed') {
+            $("#wrapper").addClass("toggled");
+        }
+
+        var savedState = localStorage.getItem('sidebar-state');
+
+        if (savedState === 'closed') {
+            $("#wrapper").addClass("toggled"); // Hafızada 'kapalı' ise kapat
+        } else {
+            $("#wrapper").removeClass("toggled"); // Değilse açık kalsın
+        }
+
+        // B. BUTONA TIKLAMA OLAYI
+        // .off('click') ekledik ki üst üste binip bozulmasın
+        $("#menu-toggle").off('click').on('click', function(e) {
+            e.preventDefault();
+
+            // 1. Sınıfı Ekle/Çıkar (Görsel İşlem)
+            $("#wrapper").toggleClass("toggled");
+
+            // 2. Yeni Durumu Hafızaya Kaydet
+            if ($("#wrapper").hasClass("toggled")) {
+                localStorage.setItem('sidebar-state', 'closed'); // Kapandı olarak kaydet
+            } else {
+                localStorage.setItem('sidebar-state', 'open');   // Açıldı olarak kaydet
+            }
+        });
+
         // --- AKILLI MENÜ ARAMA (Accordion Destekli) ---
         $('#menu-search-input').on('keyup', function() {
             var value = $(this).val().toLowerCase();
