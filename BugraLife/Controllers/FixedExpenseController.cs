@@ -90,5 +90,7 @@ namespace BugraLife.Controllers
 
             return Json(new { success = true, message = "Sabit gider takibi iptal edildi." });
         }
+
+
     }
 }

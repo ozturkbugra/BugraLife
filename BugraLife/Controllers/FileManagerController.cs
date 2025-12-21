@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BugraLife.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.Features; // FormOptions için gerekli olabilir
+using Microsoft.AspNetCore.Http.Features;
 
 namespace BugraLife.Controllers
 {
@@ -20,27 +20,20 @@ namespace BugraLife.Controllers
         // =========================================================================
         public IActionResult Index(string path = "")
         {
-            // wwwroot/paylasim klasörü kontrolü
-            if (string.IsNullOrEmpty(_env.WebRootPath))
-            {
-                return Content("Hata: Sunucu kök dizini (wwwroot) bulunamadı.");
-            }
+            if (string.IsNullOrEmpty(_env.WebRootPath)) return Content("Hata: wwwroot bulunamadı.");
 
             var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
             if (!Directory.Exists(rootPath)) Directory.CreateDirectory(rootPath);
 
-            // Path null ise boş string yap
             var currentFullPath = Path.Combine(rootPath, path ?? "");
 
-            // GÜVENLİK: Path Traversal (../../) Koruması
-            // Kullanıcı ".." yazarak sistem dosyalarına erişmeye çalışırsa kök dizine at.
+            // Güvenlik: Kök dizin dışına çıkılmasın
             if (!Path.GetFullPath(currentFullPath).StartsWith(rootPath))
             {
                 currentFullPath = rootPath;
                 path = "";
             }
 
-            // Klasör fiziksel olarak yoksa (Silinmişse vb.) kök dizine dön
             if (!Directory.Exists(currentFullPath))
             {
                 currentFullPath = rootPath;
@@ -50,13 +43,12 @@ namespace BugraLife.Controllers
             var model = new FileManagerViewModel
             {
                 CurrentPath = path,
-                // ParentPath: Eğer ana dizindeysek null, değilse bir üst klasör
                 ParentPath = string.IsNullOrEmpty(path) ? null : Path.GetDirectoryName(path)?.Replace("\\", "/")
             };
 
             try
             {
-                // A. KLASÖRLERİ ÇEK
+                // Klasörler
                 var dirs = Directory.GetDirectories(currentFullPath);
                 foreach (var dir in dirs)
                 {
@@ -70,7 +62,7 @@ namespace BugraLife.Controllers
                     });
                 }
 
-                // B. DOSYALARI ÇEK
+                // Dosyalar
                 var files = Directory.GetFiles(currentFullPath);
                 foreach (var file in files)
                 {
@@ -88,8 +80,7 @@ namespace BugraLife.Controllers
             }
             catch (Exception ex)
             {
-                // Erişim hatası vb. olursa kullanıcıya göster (View'da ViewBag.Error kontrolü yapabilirsin)
-                ViewBag.Error = "Dosyalar listelenirken hata oluştu: " + ex.Message;
+                ViewBag.Error = "Hata: " + ex.Message;
             }
 
             return View(model);
@@ -106,7 +97,6 @@ namespace BugraLife.Controllers
             var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
             var fullPath = Path.Combine(rootPath, currentPath ?? "", folderName);
 
-            // Sadece "paylasim" klasörü altına izin ver
             if (Path.GetFullPath(fullPath).StartsWith(rootPath) && !Directory.Exists(fullPath))
             {
                 Directory.CreateDirectory(fullPath);
@@ -116,159 +106,7 @@ namespace BugraLife.Controllers
         }
 
         // =========================================================================
-        // 3. DOSYA YÜKLEME (4 GB DESTEKLİ & AJAX UYUMLU)
-        // =========================================================================
-        [HttpPost]
-        [DisableRequestSizeLimit] // ASP.NET Core limitlerini kaldırır (IIS limiti web.config'den gelir)
-        [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)] // Form veri limitini kaldırır
-        public async Task<IActionResult> UploadFile(string currentPath, List<IFormFile> files)
-        {
-            // Eğer dosya çok büyükse veya IIS reddettiyse 'files' null gelebilir.
-            if (files == null || files.Count == 0)
-            {
-                return Json(new { success = false, message = "Dosya seçilmedi veya sunucu limiti aşıldı." });
-            }
-
-            try
-            {
-                var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
-                var targetFolder = Path.Combine(rootPath, currentPath ?? "");
-
-                if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
-
-                // Güvenlik kontrolü
-                if (Path.GetFullPath(targetFolder).StartsWith(rootPath))
-                {
-                    foreach (var file in files)
-                    {
-                        if (file.Length > 0)
-                        {
-                            var filePath = Path.Combine(targetFolder, file.FileName);
-
-                            // Büyük dosyaları stream ile kopyala (RAM'i şişirmez)
-                            using (var stream = new FileStream(filePath, FileMode.Create))
-                            {
-                                await file.CopyToAsync(stream);
-                            }
-                        }
-                    }
-                    // Başarılı (Frontend AJAX beklediği için JSON dönüyoruz)
-                    return Json(new { success = true, message = "Dosyalar başarıyla yüklendi." });
-                }
-
-                return Json(new { success = false, message = "Geçersiz hedef klasör." });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = "Yükleme hatası: " + ex.Message });
-            }
-        }
-
-        // =========================================================================
-        // 4. SİLME İŞLEMİ (DOSYA VEYA KLASÖR)
-        // =========================================================================
-        [HttpPost]
-        public IActionResult Delete(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return RedirectToAction("Index");
-
-            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
-            var fullPath = Path.Combine(rootPath, path);
-
-            // Sadece "paylasim" klasörü altındakileri silebilir
-            if (Path.GetFullPath(fullPath).StartsWith(rootPath))
-            {
-                try
-                {
-                    if (System.IO.File.Exists(fullPath))
-                    {
-                        System.IO.File.Delete(fullPath);
-                    }
-                    else if (Directory.Exists(fullPath))
-                    {
-                        Directory.Delete(fullPath, true); // true = İçi doluysa da sil
-                    }
-                }
-                catch
-                {
-                    // Silme hatası olursa (izin vb.) sessizce devam et veya logla
-                }
-            }
-
-            // Silme işleminden sonra mevcut klasöre değil, silinen öğenin bulunduğu listeye dön
-            var parent = Path.GetDirectoryName(path)?.Replace("\\", "/");
-            return RedirectToAction("Index", new { path = parent });
-        }
-
-        // =========================================================================
-        // 5. DOSYA İNDİRME
-        // =========================================================================
-        public IActionResult Download(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return RedirectToAction("Index");
-
-            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
-            var fullPath = Path.Combine(rootPath, path);
-
-            if (Path.GetFullPath(fullPath).StartsWith(rootPath) && System.IO.File.Exists(fullPath))
-            {
-                // Dosya türünü (MIME Type) otomatik bul
-                var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
-                if (!provider.TryGetContentType(fullPath, out string contentType))
-                {
-                    contentType = "application/octet-stream"; // Bilinmiyorsa genel dosya tipi
-                }
-
-                // Dosyayı byte array olarak belleğe alıp göndermek yerine Stream olarak gönder
-                // Bu, büyük dosyalarda sunucu RAM'ini şişirmez.
-                var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
-                return File(fileStream, contentType, Path.GetFileName(fullPath));
-            }
-
-            return RedirectToAction("Index");
-        }
-
-        // =========================================================================
-        // YARDIMCI METOTLAR (PRIVATE)
-        // =========================================================================
-
-        // Byte'ı KB, MB, GB, TB formatına çevirir
-        private string FormatSize(long bytes)
-        {
-            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-            int counter = 0;
-            decimal number = (decimal)bytes;
-            while (Math.Round(number / 1024) >= 1)
-            {
-                number = number / 1024;
-                counter++;
-            }
-            return string.Format("{0:n1} {1}", number, suffixes[counter]);
-        }
-
-        // Uzantıya göre Bootstrap ikonu belirler
-        private string GetFileIcon(string ext)
-        {
-            return ext.ToLower() switch
-            {
-                ".pdf" => "bi-file-pdf-fill text-danger",
-                ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".svg" => "bi-file-image-fill text-info",
-                ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => "bi-file-zip-fill text-warning",
-                ".txt" or ".md" or ".log" => "bi-file-text-fill text-secondary",
-                ".xlsx" or ".xls" or ".csv" => "bi-file-excel-fill text-success",
-                ".docx" or ".doc" => "bi-file-word-fill text-primary",
-                ".pptx" or ".ppt" => "bi-file-ppt-fill text-danger",
-                ".mp4" or ".avi" or ".mov" or ".mkv" => "bi-file-play-fill text-danger",
-                ".mp3" or ".wav" or ".flac" => "bi-file-music-fill text-success",
-                ".exe" or ".msi" or ".bat" => "bi-file-earmark-binary-fill text-secondary",
-                ".html" or ".css" or ".js" or ".cs" or ".json" or ".xml" => "bi-file-earmark-code-fill text-warning",
-                _ => "bi-file-earmark-fill text-light"
-            };
-        }
-
-
-        // =========================================================================
-        // 3. PARÇALI DOSYA YÜKLEME (CHUNK UPLOAD) - KESİN ÇÖZÜM
+        // 3. PARÇALI DOSYA YÜKLEME (CHUNK UPLOAD - SINIRSIZ)
         // =========================================================================
         [HttpPost]
         [DisableRequestSizeLimit]
@@ -282,18 +120,19 @@ namespace BugraLife.Controllers
 
                 if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
 
+                // Güvenlik
                 if (!Path.GetFullPath(targetFolder).StartsWith(rootPath))
                     return Json(new { success = false, message = "Geçersiz yol." });
 
                 var filePath = Path.Combine(targetFolder, fileName);
 
-                // 1. Eğer ilk parçaysa (chunkIndex == 0) ve dosya varsa, eskisini sil (veya üzerine yazmaya başla)
+                // İlk parçaysa eski dosyayı sil (Sıfırdan yazıyoruz)
                 if (chunkIndex == 0 && System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
                 }
 
-                // 2. Gelen parçayı dosyanın sonuna EKLE (Append Mode)
+                // Parçayı dosyanın ucuna ekle (Append)
                 using (var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None))
                 {
                     await chunk.CopyToAsync(stream);
@@ -305,6 +144,195 @@ namespace BugraLife.Controllers
             {
                 return Json(new { success = false, message = ex.Message });
             }
+        }
+
+        // =========================================================================
+        // 4. SİLME İŞLEMİ
+        // =========================================================================
+        [HttpPost]
+        public IActionResult Delete(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return RedirectToAction("Index");
+
+            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+            var fullPath = Path.Combine(rootPath, path);
+
+            if (Path.GetFullPath(fullPath).StartsWith(rootPath))
+            {
+                try
+                {
+                    if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+                    else if (Directory.Exists(fullPath)) Directory.Delete(fullPath, true);
+                }
+                catch { }
+            }
+
+            var parent = Path.GetDirectoryName(path)?.Replace("\\", "/");
+            return RedirectToAction("Index", new { path = parent });
+        }
+
+        // =========================================================================
+        // 5. YENİDEN ADLANDIRMA (RENAME)
+        // =========================================================================
+        [HttpPost]
+        public IActionResult RenameItem(string currentPath, string oldPath, string newName)
+        {
+            try
+            {
+                var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+                var fullOldPath = Path.Combine(rootPath, oldPath);
+
+                if (!Path.GetFullPath(fullOldPath).StartsWith(rootPath)) return Json(new { success = false, message = "Geçersiz işlem." });
+
+                bool isDirectory = Directory.Exists(fullOldPath);
+                string parentDir = Path.GetDirectoryName(fullOldPath);
+                string fullNewPath;
+
+                if (!isDirectory)
+                {
+                    string ext = Path.GetExtension(fullOldPath);
+                    // Kullanıcı uzantıyı sildiyse biz ekleyelim
+                    if (!newName.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) newName += ext;
+                    fullNewPath = Path.Combine(parentDir, newName);
+                }
+                else
+                {
+                    fullNewPath = Path.Combine(parentDir, newName);
+                }
+
+                if (fullOldPath != fullNewPath)
+                {
+                    if (isDirectory) Directory.Move(fullOldPath, fullNewPath);
+                    else System.IO.File.Move(fullOldPath, fullNewPath);
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // =========================================================================
+        // 6. TAŞIMA (MOVE) VE KLASÖR LİSTESİ
+        // =========================================================================
+        [HttpGet]
+        public IActionResult GetAllFolders()
+        {
+            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+            if (!Directory.Exists(rootPath)) Directory.CreateDirectory(rootPath);
+
+            var folderList = new List<object>();
+            folderList.Add(new { path = "", name = "Ana Dizin (/)" });
+            GetDirectoriesRecursive(rootPath, rootPath, folderList);
+            return Json(folderList);
+        }
+
+        private void GetDirectoriesRecursive(string rootPath, string currentPath, List<object> list)
+        {
+            try
+            {
+                var dirs = Directory.GetDirectories(currentPath);
+                foreach (var dir in dirs)
+                {
+                    string relativePath = Path.GetRelativePath(rootPath, dir).Replace("\\", "/");
+                    string name = new DirectoryInfo(dir).Name;
+                    int depth = relativePath.Split('/').Length;
+                    string displayName = new string('-', depth) + " " + name;
+                    list.Add(new { path = relativePath, name = displayName });
+                    GetDirectoriesRecursive(rootPath, dir, list);
+                }
+            }
+            catch { }
+        }
+
+        [HttpPost]
+        public IActionResult MoveItem(string itemPath, string targetFolderPath)
+        {
+            try
+            {
+                var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+                var sourcePath = Path.Combine(rootPath, itemPath);
+                var destPath = Path.Combine(rootPath, targetFolderPath ?? "");
+
+                if (!Path.GetFullPath(sourcePath).StartsWith(rootPath) || !Path.GetFullPath(destPath).StartsWith(rootPath))
+                    return Json(new { success = false, message = "Geçersiz yol." });
+
+                if (!Directory.Exists(destPath)) return Json(new { success = false, message = "Hedef klasör yok." });
+
+                string itemName = Path.GetFileName(sourcePath);
+                string finalDestPath = Path.Combine(destPath, itemName);
+
+                if (sourcePath == finalDestPath) return Json(new { success = false, message = "Dosya zaten burada." });
+
+                if (Directory.Exists(sourcePath))
+                {
+                    if (finalDestPath.StartsWith(sourcePath)) return Json(new { success = false, message = "Klasör kendi içine taşınamaz." });
+                    Directory.Move(sourcePath, finalDestPath);
+                }
+                else if (System.IO.File.Exists(sourcePath))
+                {
+                    System.IO.File.Move(sourcePath, finalDestPath);
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // =========================================================================
+        // 7. İNDİRME VE ÖNİZLEME
+        // =========================================================================
+        [HttpGet]
+        public IActionResult Download(string path, bool isInline = false)
+        {
+            if (string.IsNullOrEmpty(path)) return RedirectToAction("Index");
+
+            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+            var fullPath = Path.Combine(rootPath, path);
+
+            if (Path.GetFullPath(fullPath).StartsWith(rootPath) && System.IO.File.Exists(fullPath))
+            {
+                var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+                if (!provider.TryGetContentType(fullPath, out string contentType)) contentType = "application/octet-stream";
+
+                var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
+
+                if (isInline) return File(fileStream, contentType); // Tarayıcıda aç
+                return File(fileStream, contentType, Path.GetFileName(fullPath)); // İndir
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        // YARDIMCILAR
+        private string FormatSize(long bytes)
+        {
+            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+            int counter = 0;
+            decimal number = (decimal)bytes;
+            while (Math.Round(number / 1024) >= 1) { number = number / 1024; counter++; }
+            return string.Format("{0:n1} {1}", number, suffixes[counter]);
+        }
+
+        private string GetFileIcon(string ext)
+        {
+            return ext.ToLower() switch
+            {
+                ".pdf" => "bi-file-pdf-fill text-danger",
+                ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" => "bi-file-image-fill text-info",
+                ".zip" or ".rar" or ".7z" => "bi-file-zip-fill text-warning",
+                ".txt" => "bi-file-text-fill text-secondary",
+                ".xlsx" or ".xls" => "bi-file-excel-fill text-success",
+                ".docx" or ".doc" => "bi-file-word-fill text-primary",
+                ".mp4" or ".avi" or ".mov" => "bi-file-play-fill text-danger",
+                ".mp3" or ".wav" => "bi-file-music-fill text-success",
+                _ => "bi-file-earmark-fill text-light"
+            };
         }
     }
 }
