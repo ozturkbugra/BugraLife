@@ -18,7 +18,7 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table datatable table-hover table-striped align-middle">
+            <table class="table datatable table-hover table-striped align-middle" data-order='[[ 0, "desc" ]]'>
                 <thead>
                     <tr>
                         <th>Tarih</th>
@@ -34,7 +34,9 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.income_date.ToString("dd.MM.yyyy")</td>
+                            <td data-order="@item.income_date.ToString("yyyy-MM-dd")">
+                                @item.income_date.ToString("dd.MM.yyyy")
+                                </td>
 
                             <td class="fw-bold">
                                 @(item.Person != null ? item.Person.person_name : "-")

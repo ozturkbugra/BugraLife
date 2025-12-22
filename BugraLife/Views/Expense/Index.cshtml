@@ -18,7 +18,7 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table datatable table-hover table-striped align-middle">
+            <table class="table datatable table-hover table-striped align-middle" data-order='[[ 0, "desc" ]]'>
                 <thead>
                     <tr>
                         <th>Tarih</th>
@@ -34,8 +34,9 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.expense_date.ToString("dd.MM.yyyy")</td>
-
+                            <td data-order="@item.expense_date.ToString("yyyy-MM-dd")">
+                                @item.expense_date.ToString("dd.MM.yyyy")
+                            </td>
                             <td class="fw-bold">
                                 @(item.Person != null ? item.Person.person_name : "-")
                             </td>
@@ -248,9 +249,10 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
 
-            // --- A. DÜZENLEME BUTONU ---
+
+        $(document).ready(function() {
+          // --- A. DÜZENLEME BUTONU ---
             $('.datatable').on('click', '.btn-edit', function() {
                 var id = $(this).data('id');
                 var personId = $(this).data('person');
