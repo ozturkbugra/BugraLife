@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using BugraLife.DBContext;
 using BugraLife.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; 
 
 namespace BugraLife.Controllers
 {
@@ -9,10 +11,12 @@ namespace BugraLife.Controllers
     public class FileManagerController : Controller
     {
         private readonly IWebHostEnvironment _env;
+        private readonly BugraLifeDBContext _context; // Veritabanı eklendi
 
-        public FileManagerController(IWebHostEnvironment env)
+        public FileManagerController(IWebHostEnvironment env, BugraLifeDBContext context)
         {
             _env = env;
+            _context = context;
         }
 
         // =========================================================================
@@ -333,6 +337,92 @@ namespace BugraLife.Controllers
                 ".mp3" or ".wav" => "bi-file-music-fill text-success",
                 _ => "bi-file-earmark-fill text-light"
             };
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> CreateShareLink(string currentPath, string fileName)
+        {
+            try
+            {
+                var relativePath = Path.Combine(currentPath ?? "", fileName).Replace("\\", "/");
+
+                // Zaten aktif bir paylaşım var mı? Varsa onu döndür.
+                var existingShare = await _context.FileShareds
+                    .FirstOrDefaultAsync(x => x.FilePath == relativePath && x.IsActive);
+
+                string token;
+                if (existingShare != null)
+                {
+                    token = existingShare.Token;
+                }
+                else
+                {
+                    token = Guid.NewGuid().ToString("N"); // Rastgele temiz bir kod
+                    var newShare = new FileShared
+                    {
+                        Token = token,
+                        FilePath = relativePath,
+                        IsActive = true,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.FileShareds.Add(newShare);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Linki oluştur: https://siteadi.com/s/TOKEN
+                var shareUrl = Url.Action("PublicDownload", "FileManager", new { token = token }, Request.Scheme);
+
+                // İstersen rota özelleştirip /s/token yapabilirsin ama şimdilik standart route:
+                // /FileManager/PublicDownload?token=...
+
+                return Json(new { success = true, url = shareUrl, token = token });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // B. PAYLAŞIMI İPTAL ET (REVOKE)
+        [HttpPost]
+        public async Task<IActionResult> RevokeShare(string token)
+        {
+            var share = await _context.FileShareds.FirstOrDefaultAsync(x => x.Token == token);
+            if (share != null)
+            {
+                share.IsActive = false; // Pasife çek
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            return Json(new { success = false, message = "Paylaşım bulunamadı." });
+        }
+
+        // C. GENEL İNDİRME (LOGIN GEREKTİRMEZ!)
+        [AllowAnonymous] // <--- KRİTİK NOKTA: Herkese açık
+        [HttpGet]
+        public async Task<IActionResult> PublicDownload(string token)
+        {
+            if (string.IsNullOrEmpty(token)) return Content("Geçersiz Link");
+
+            var share = await _context.FileShareds.FirstOrDefaultAsync(x => x.Token == token && x.IsActive);
+
+            if (share == null) return Content("Bu paylaşım linki iptal edilmiş veya geçersiz.");
+
+            // Dosya yolunu bul
+            var rootPath = Path.Combine(_env.WebRootPath, "paylasim");
+            var fullPath = Path.Combine(rootPath, share.FilePath);
+
+            if (System.IO.File.Exists(fullPath))
+            {
+                var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+                if (!provider.TryGetContentType(fullPath, out string contentType)) contentType = "application/octet-stream";
+
+                var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
+                return File(fileStream, contentType, Path.GetFileName(fullPath));
+            }
+
+            return Content("Dosya sunucudan silinmiş.");
         }
     }
 }

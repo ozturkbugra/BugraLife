@@ -32,6 +32,7 @@ namespace BugraLife.DBContext
         public DbSet<ActivityDefinition> ActivityDefinitions { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<PracticalNote> PracticalNotes { get; set; }
+        public DbSet<FileShared> FileShareds { get; set; }
 
 
     }

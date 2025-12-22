@@ -88,6 +88,11 @@
                                         <button class="btn btn-sm btn-danger action-btn" onclick="deleteItem('@item.Path', 'dosya')" title="Sil"><i class="bi bi-x-lg"></i></button>
                                         <button class="btn btn-sm btn-info action-btn " onclick="renameItem('@item.Path', '@item.Name', false)" title="Düzenle"><i class="bi bi-pencil-square"></i></button>
                                         <button class="btn btn-sm btn-light action-btn" onclick="openMoveModal('@item.Path')" title="Taşı"><i class="bi bi-arrow-right-square"></i></button>
+                                        <button class="btn btn-sm btn-primary action-btn text-white"
+                                                onclick="openShareModal('@item.Path', '@item.Name')"
+                                                title="Paylaş">
+                                            <i class="bi bi-share-fill"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -95,6 +100,46 @@
                     }
                 </div>
             }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content  border-secondary ">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="bi bi-link-45deg me-2 text-primary"></i>Dosya Paylaş</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+
+                <input type="hidden" id="shareCurrentPath">
+                <input type="hidden" id="shareFileName">
+                <input type="hidden" id="shareToken">
+
+                <div class="mb-3">
+                    <p class=" small">Aşağıdaki linke sahip olan herkes bu dosyayı indirebilir.</p>
+
+                    <div class="input-group">
+                        <input type="text" id="shareLinkInput" class="form-control bg-secondary  border-0" readonly>
+                        <button class="btn btn-primary" onclick="copyShareLink()">
+                            <i class="bi bi-clipboard"></i> Kopyala
+                        </button>
+                    </div>
+                </div>
+
+                <div id="shareActiveArea" style="display:none;">
+                    <div class="alert alert-success bg-opacity-25 bg-success  border-0 d-flex align-items-center justify-content-between p-2">
+                        <small><i class="bi bi-check-circle-fill me-1"></i> Bağlantı aktif</small>
+                        <button class="btn btn-sm btn-danger py-0" onclick="revokeLink()">İptal Et</button>
+                    </div>
+                </div>
+
+                <div id="shareLoadingArea" class="text-center py-3" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
@@ -492,6 +537,80 @@
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+
+
+        function openShareModal(path, name) {
+            // Mobilde tıklamayı durdur
+            event.stopPropagation();
+            event.preventDefault();
+
+            // Sadece dosya adını al (path içinde klasör adı da olabilir)
+            // Bizim controller createShareLink(currentPath, fileName) bekliyor.
+            // Ama burada path zaten "Klasör/Dosya.jpg" formatında geliyor.
+            // O yüzden currentPath boş, fileName = path olarak gönderebiliriz ya da ayrıştırabiliriz.
+            // En temizi: Path'i olduğu gibi kullanalım, Controller'da düzenlemiştik.
+
+            // UI Hazırla
+            $('#shareFileName').val(name);
+            $('#shareLinkInput').val('');
+            $('#shareActiveArea').hide();
+            $('#shareLoadingArea').show();
+
+            var modal = new bootstrap.Modal(document.getElementById('shareModal'));
+            modal.show();
+
+            // Link Oluştur / Getir
+            $.post('/FileManager/CreateShareLink', {
+                currentPath: '', // Path zaten full geliyor
+                fileName: path
+            }, function(response) {
+                $('#shareLoadingArea').hide();
+                if (response.success) {
+                    $('#shareLinkInput').val(response.url);
+                    $('#shareToken').val(response.token);
+                    $('#shareActiveArea').fadeIn();
+                } else {
+                    $('#shareLinkInput').val('Hata oluştu.');
+                }
+            });
+        }
+
+        function copyShareLink() {
+            var copyText = document.getElementById("shareLinkInput");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // Mobil için
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'success',
+                    title: 'Link kopyalandı!', showConfirmButton: false, timer: 2000,
+                    background: '#252b36', color: '#fff'
+                });
+            });
+        }
+
+        function revokeLink() {
+            var token = $('#shareToken').val();
+            Swal.fire({
+                title: 'Emin misin?',
+                text: "Bu link iptal edilecek, artık kimse indiremeyecek!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, İptal Et',
+                cancelButtonText: 'Vazgeç',
+                background: '#252b36', color: '#fff'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/FileManager/RevokeShare', { token: token }, function(response) {
+                        if (response.success) {
+                            $('#shareModal').modal('hide');
+                            Swal.fire({icon:'success', title:'Link Pasif Edildi', timer:1500, showConfirmButton:false, background:'#252b36', color:'#fff'});
+                        }
+                    });
+                }
+            });
         }
     </script>
 }

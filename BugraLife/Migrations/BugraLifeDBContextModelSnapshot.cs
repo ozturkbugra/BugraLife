@@ -211,6 +211,33 @@ namespace BugraLife.Migrations
                     b.ToTable("ExpenseTypes");
                 });
 
+            modelBuilder.Entity("BugraLife.Models.FileShared", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FileShareds");
+                });
+
             modelBuilder.Entity("BugraLife.Models.FixedExpense", b =>
                 {
                     b.Property<int>("fixedexpense_id")
