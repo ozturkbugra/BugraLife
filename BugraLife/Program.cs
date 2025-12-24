@@ -1,8 +1,10 @@
 using BugraLife.DBContext;
 using BugraLife.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,6 +133,15 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Veri eklerken hata oluþtu: " + ex.Message);
     }
 }
+
+var supportedCultures = new[] { new CultureInfo("tr-TR") };
+var localizationOptions = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("tr-TR"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+};
+app.UseRequestLocalization(localizationOptions);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
