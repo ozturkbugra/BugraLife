@@ -48,6 +48,7 @@ namespace BugraLife.Controllers
         [HttpPost]
         public async Task<IActionResult> LogActivity(int defId, DateTime date)
         {
+            // Aynı gün aynı aktivite var mı kontrolü
             var exists = await _context.ActivityLogs.AnyAsync(x =>
                 x.activitydefinition_id == defId &&
                 x.log_date.Date == date.Date);
@@ -65,7 +66,6 @@ namespace BugraLife.Controllers
             _context.Add(log);
             await _context.SaveChangesAsync();
 
-            // Yeni oluşan Log ID'sini dönüyoruz
             return Json(new { success = true, id = log.activitylog_id });
         }
 
@@ -82,19 +82,21 @@ namespace BugraLife.Controllers
             return Json(new { success = false });
         }
 
-        // --- TANIMLAMA İŞLEMLERİ ---
+        // --- TANIMLAMA İŞLEMLERİ (CRUD) ---
 
         [HttpPost]
         public async Task<IActionResult> CreateDefinition(ActivityDefinition model)
         {
             if (ModelState.IsValid)
             {
+                model.is_active = true; // Varsayılan aktif
                 _context.Add(model);
                 await _context.SaveChangesAsync();
-                // ÖNEMLİ: Yeni eklenen veriyi geri gönderiyoruz ki sayfayı yenilemeden ekleyebilelim
-                return Json(new { success = true, item = model });
+
+                // Eklenen veriyi geri dönüyoruz (UI güncellemek için)
+                return Json(new { success = true, message = "Aktivite tanımı eklendi.", data = model });
             }
-            return Json(new { success = false });
+            return Json(new { success = false, message = "Eksik bilgi." });
         }
 
         [HttpPost]
@@ -106,9 +108,11 @@ namespace BugraLife.Controllers
                 existing.name = model.name;
                 existing.color = model.color;
                 await _context.SaveChangesAsync();
-                return Json(new { success = true });
+
+                // Güncellenen veriyi geri dönüyoruz
+                return Json(new { success = true, message = "Aktivite güncellendi.", data = existing });
             }
-            return Json(new { success = false });
+            return Json(new { success = false, message = "Kayıt bulunamadı." });
         }
 
         [HttpPost]
@@ -117,11 +121,13 @@ namespace BugraLife.Controllers
             var item = await _context.ActivityDefinitions.FindAsync(id);
             if (item != null)
             {
+                // Soft Delete (Veriyi kaybetmemek için sadece pasife çekiyoruz,
+                // böylece geçmiş loglar bozulmaz ama yeni ekleme listesinde çıkmaz)
                 item.is_active = false;
                 await _context.SaveChangesAsync();
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Aktivite silindi." });
             }
-            return Json(new { success = false });
+            return Json(new { success = false, message = "Hata oluştu." });
         }
     }
 }

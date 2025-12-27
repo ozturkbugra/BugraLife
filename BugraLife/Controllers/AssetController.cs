@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BugraLife.Models;
 using BugraLife.DBContext;
 using Microsoft.AspNetCore.Authorization;
+using System.Globalization;
 
 namespace BugraLife.Controllers
 {
@@ -16,24 +17,16 @@ namespace BugraLife.Controllers
             _context = context;
         }
 
-        // 1. LİSTELEME VE DROPDOWN DOLDURMA
+        // 1. LİSTELEME
         public async Task<IActionResult> Index()
         {
-            // Varlıkları listelerken ilişkili tabloları (Ingredient, Person) dahil ediyoruz (Include)
             var assets = await _context.Assets
                 .Include(x => x.Ingredient)
                 .Include(x => x.Person)
-                .OrderByDescending(x => x.asset_date) // Tarihe göre yeniden eskiye
+                .OrderByDescending(x => x.asset_date)
                 .ToListAsync();
 
-            // --- DROPDOWN VERİLERİ ---
-
-            // 1. Ingredients: Alfabetik sıralı
-            ViewBag.Ingredients = await _context.Ingredients
-                .OrderBy(x => x.ingredient_name)
-                .ToListAsync();
-
-            // 2. Persons: Sadece is_bank == false olanlar + Order'a göre sıralı
+            ViewBag.Ingredients = await _context.Ingredients.OrderBy(x => x.ingredient_name).ToListAsync();
             ViewBag.Persons = await _context.Persons
                 .Where(x => x.is_bank == false)
                 .OrderBy(x => x.person_order)
@@ -42,7 +35,7 @@ namespace BugraLife.Controllers
             return View(assets);
         }
 
-        // 2. EKLEME (POST - AJAX)
+        // 2. EKLEME (Sayfa Yenilemeden)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Asset asset)
@@ -51,12 +44,16 @@ namespace BugraLife.Controllers
             {
                 _context.Assets.Add(asset);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Varlık başarıyla eklendi!" });
+
+                // Eklenen veriyi detaylarıyla çek (Tabloya basmak için)
+                var newAsset = await GetAssetDetails(asset.asset_id);
+
+                return Json(new { success = true, message = "Varlık başarıyla eklendi!", data = newAsset });
             }
             return Json(new { success = false, message = "Form verileri eksik veya hatalı." });
         }
 
-        // 3. GÜNCELLEME (POST - AJAX)
+        // 3. GÜNCELLEME (Sayfa Yenilemeden)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Asset asset)
@@ -65,12 +62,16 @@ namespace BugraLife.Controllers
             {
                 _context.Assets.Update(asset);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Varlık güncellendi!" });
+
+                // Güncellenen veriyi detaylarıyla çek
+                var updatedAsset = await GetAssetDetails(asset.asset_id);
+
+                return Json(new { success = true, message = "Varlık güncellendi!", data = updatedAsset });
             }
             return Json(new { success = false, message = "Güncelleme başarısız." });
         }
 
-        // 4. SİLME (POST - AJAX)
+        // 4. SİLME (Sayfa Yenilemeden)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -83,6 +84,30 @@ namespace BugraLife.Controllers
                 return Json(new { success = true, message = "Varlık silindi." });
             }
             return Json(new { success = false, message = "Kayıt bulunamadı." });
+        }
+
+        // YARDIMCI METOD: ID'si verilen varlığın tüm detaylarını JSON formatına uygun hazırlar
+        private async Task<object> GetAssetDetails(int id)
+        {
+            var item = await _context.Assets
+                .Include(x => x.Ingredient)
+                .Include(x => x.Person)
+                .FirstOrDefaultAsync(x => x.asset_id == id);
+
+            var trCulture = new CultureInfo("tr-TR");
+
+            return new
+            {
+                id = item.asset_id,
+                dateStr = item.asset_date.ToString("dd.MM.yyyy"),
+                dateRaw = item.asset_date.ToString("yyyy-MM-dd"),
+                person = item.Person != null ? item.Person.person_name : "-",
+                personId = item.person_id,
+                ingredient = item.Ingredient != null ? item.Ingredient.ingredient_name : "-",
+                ingredientId = item.ingredient_id,
+                desc = item.asset_description,
+                amountRaw = item.asset_amount.ToString("N2", trCulture) // 1.500,00 formatı
+            };
         }
     }
 }
