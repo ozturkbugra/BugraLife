@@ -29,16 +29,16 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr>
-                            <td class="text-center fw-bold">@item.expensetype_order</td>
-                            <td class="fw-bold">@item.expensetype_name</td>
+                        <tr id="row-@item.expensetype_id">
+                            <td class="text-center fw-bold col-order">@item.expensetype_order</td>
+                            <td class="fw-bold col-name">@item.expensetype_name</td>
 
-                            <td class="text-muted small">
+                            <td class="text-muted small col-desc">
                                 @(!string.IsNullOrEmpty(item.description) ? item.description : "-")
                             </td>
 
-                            <td>
-                                <div class="d-flex gap-2">
+                            <td class="col-badges">
+                                <div class="d-flex gap-2 badge-container">
                                     @if (item.is_bank)
                                     {
                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
@@ -182,18 +182,16 @@
 
             // --- A. DÜZENLEME BUTONU ---
             $('.datatable').on('click', '.btn-edit', function() {
-                var id = $(this).data('id');
-                var name = $(this).data('name');
-                var desc = $(this).data('desc'); // Açıklamayı okuyoruz
-                var order = $(this).data('order');
+                var btn = $(this);
 
-                var isBank = $(this).data('bank') === "True" || $(this).data('bank') === true;
-                var isHome = $(this).data('home') === "True" || $(this).data('home') === true;
+                $('#edit_id').val(btn.data('id'));
+                $('#edit_name').val(btn.data('name'));
+                $('#edit_desc').val(btn.data('desc'));
+                $('#edit_order').val(btn.data('order'));
 
-                $('#edit_id').val(id);
-                $('#edit_name').val(name);
-                $('#edit_desc').val(desc); // Modal içine yazıyoruz
-                $('#edit_order').val(order);
+                // Boolean değer kontrolü (True string mi bool mu gelebilir)
+                var isBank = btn.data('bank') === "True" || btn.data('bank') === true;
+                var isHome = btn.data('home') === "True" || btn.data('home') === true;
 
                 $('#edit_is_bank').prop('checked', isBank);
                 $('#edit_is_home').prop('checked', isHome);
@@ -204,59 +202,132 @@
             // --- B. EKLEME (AJAX) ---
             $('#createForm').submit(function(e) {
                 e.preventDefault();
-                var formData = $(this).serialize();
+                var btn = $(this).find('button[type="submit"]');
+                disableButton(btn);
 
-                $.ajax({
-                    url: '/ExpenseType/Create',
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        if (response.success) {
-                            $('#createModal').modal('hide');
-                            showToast('success', response.message);
-
-                            // Formu sıfırlama (sıralama hariç)
-                            var currentVal = parseInt($('#create_order').val()) || 0;
-                            $('#create_order').val(currentVal + 1);
-
-                            $('input[name="expensetype_name"]').val('');
-                            $('textarea[name="description"]').val(''); // Açıklamayı temizle
-                            $('#create_is_bank').prop('checked', false);
-                            $('#create_is_home').prop('checked', false);
-
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showToast('error', response.message);
-                        }
-                    },
-                    error: function() { showToast('error', 'Hata oluştu.'); }
-                });
+                processForm($(this), '/ExpenseType/Create', btn);
             });
 
             // --- C. GÜNCELLEME (AJAX) ---
             $('#editForm').submit(function(e) {
                 e.preventDefault();
-                var formData = $(this).serialize();
+                var btn = $(this).find('button[type="submit"]');
+                disableButton(btn);
+
+                processForm($(this), '/ExpenseType/Edit', btn);
+            });
+
+            // --- D. ORTAK FORM İŞLEYİCİ ---
+            function processForm(form, url, btnElement) {
+                var formData = form.serialize();
 
                 $.ajax({
-                    url: '/ExpenseType/Edit',
+                    url: url,
                     type: 'POST',
                     data: formData,
                     success: function(response) {
                         if (response.success) {
-                            $('#editModal').modal('hide');
+                            $('.modal').modal('hide');
                             showToast('success', response.message);
-                            setTimeout(() => location.reload(), 1000);
+
+                            if (url.includes("Create")) {
+                                addRow(response.data);
+                                // Formu sıfırla (sıralama hariç)
+                                var currentOrder = parseInt($('#create_order').val()) || 0;
+                                form[0].reset();
+                                $('#create_order').val(currentOrder + 1);
+                            }
+                            else if (url.includes("Edit")) {
+                                updateRow(response.data);
+                            }
                         } else {
                             showToast('error', response.message);
                         }
                     },
-                    error: function() { showToast('error', 'Hata oluştu.'); }
+                    error: function() { showToast('error', 'Hata oluştu.'); },
+                    complete: function() {
+                        enableButton(btnElement);
+                    }
                 });
-            });
+            }
+
+            // --- BUTON KİLİTLEME ---
+            function disableButton(btn) {
+                btn.prop('disabled', true);
+                btn.data('original-text', btn.html());
+                btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...');
+            }
+
+            function enableButton(btn) {
+                btn.prop('disabled', false);
+                btn.html(btn.data('original-text'));
+            }
+
+            // --- ROZET HTML OLUŞTURUCU (Helper) ---
+            function getBadgesHtml(isBank, isHome) {
+                var html = '';
+                if (isBank) {
+                    html += `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1"><i class="bi bi-bank me-1"></i> Banka Transferi</span>`;
+                }
+                if (isHome) {
+                    html += `<span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="bi bi-house-door me-1"></i> Ana Sayfada Gözüküyor</span>`;
+                }
+                return html;
+            }
+
+            // --- TABLO FONKSİYONLARI ---
+            function addRow(data) {
+                var badges = getBadgesHtml(data.is_bank, data.is_home);
+
+                var newRow = `
+                    <tr id="row-${data.expensetype_id}" class="table-success" style="transition: all 1s;">
+                        <td class="text-center fw-bold col-order">${data.expensetype_order}</td>
+                        <td class="fw-bold col-name">${data.expensetype_name}</td>
+                        <td class="text-muted small col-desc">${data.description || '-'}</td>
+                        <td class="col-badges"><div class="d-flex gap-2 badge-container">${badges}</div></td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-warning btn-sm text-white btn-edit"
+                                    data-id="${data.expensetype_id}"
+                                    data-name="${data.expensetype_name}"
+                                    data-desc="${data.description || ''}"
+                                    data-order="${data.expensetype_order}"
+                                    data-bank="${data.is_bank}"
+                                    data-home="${data.is_home}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteItem(${data.expensetype_id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+
+                $('table.datatable tbody').append(newRow); // Sona eklemek daha mantıklı olabilir sıra için
+                setTimeout(() => $(`#row-${data.expensetype_id}`).removeClass('table-success'), 1500);
+            }
+
+            function updateRow(data) {
+                var row = $(`#row-${data.expensetype_id}`);
+
+                row.find('.col-order').text(data.expensetype_order);
+                row.find('.col-name').text(data.expensetype_name);
+                row.find('.col-desc').text(data.description || '-');
+                row.find('.col-badges .badge-container').html(getBadgesHtml(data.is_bank, data.is_home));
+
+                var btn = row.find('.btn-edit');
+                btn.data('name', data.expensetype_name);
+                btn.data('desc', data.description || '');
+                btn.data('order', data.expensetype_order);
+                btn.data('bank', data.is_bank);
+                btn.data('home', data.is_home);
+
+                row.addClass('table-warning');
+                setTimeout(() => row.removeClass('table-warning'), 1500);
+            }
         });
 
-        // --- D. SİLME ---
+        // --- SİLME ---
         function deleteItem(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -278,7 +349,8 @@
                         success: function(response) {
                             if (response.success) {
                                 showToast('success', response.message);
-                                setTimeout(() => location.reload(), 1000);
+                                var row = $(`#row-${id}`);
+                                row.fadeOut(500, function() { $(this).remove(); });
                             } else {
                                 showToast('error', response.message);
                             }

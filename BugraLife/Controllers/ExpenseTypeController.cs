@@ -21,7 +21,7 @@ namespace BugraLife.Controllers
         {
             var list = await _context.ExpenseTypes.ToListAsync();
 
-            // Otomatik Sıra No Hesaplama (String to Int)
+            // Otomatik Sıra No Hesaplama
             int nextOrder = 1;
             if (list.Any())
             {
@@ -29,13 +29,13 @@ namespace BugraLife.Controllers
             }
             ViewBag.NextOrder = nextOrder;
 
-            // Listeyi sıraya göre dizip gönderelim
+            // Listeyi sayısal sıraya göre dizip gönderelim
             var sortedList = list.OrderBy(x => int.TryParse(x.expensetype_order, out int v) ? v : 0).ToList();
 
             return View(sortedList);
         }
 
-        // 2. EKLEME
+        // 2. EKLEME (Sayfa Yenilemeden)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ExpenseType expenseType)
@@ -50,12 +50,14 @@ namespace BugraLife.Controllers
 
                 _context.ExpenseTypes.Add(expenseType);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Gider türü eklendi!" });
+
+                // Eklenen veriyi geri dönüyoruz (Tabloya basmak için)
+                return Json(new { success = true, message = "Gider türü eklendi!", data = expenseType });
             }
             return Json(new { success = false, message = "Form verileri geçersiz." });
         }
 
-        // 3. GÜNCELLEME
+        // 3. GÜNCELLEME (Sayfa Yenilemeden)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ExpenseType expenseType)
@@ -70,7 +72,9 @@ namespace BugraLife.Controllers
 
                 _context.ExpenseTypes.Update(expenseType);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Güncelleme başarılı!" });
+
+                // Güncellenen veriyi geri dönüyoruz
+                return Json(new { success = true, message = "Güncelleme başarılı!", data = expenseType });
             }
             return Json(new { success = false, message = "Güncelleme başarısız." });
         }
