@@ -10,7 +10,23 @@
 
 <div class="card shadow-sm border-0 mt-3">
     <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-arrow-down-circle me-2"></i>Gider Listesi</h5>
+
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-arrow-down-circle me-2"></i>Gider Listesi</h5>
+
+            @if (ViewBag.ShowAll == true)
+            {
+                <a href="/Expense/Index?showAll=false" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-calendar-month"></i> Bu Ayı Göster
+                </a>
+            }
+            else
+            {
+                <a href="/Expense/Index?showAll=true" class="btn btn-success btn-sm">
+                    <i class="bi bi-list-ul"></i> Tümünü Göster
+                </a>
+            }
+        </div>
 
         <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
             <i class="bi bi-plus-lg me-1"></i> Yeni Gider Ekle
@@ -33,30 +49,30 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr>
-                            <td data-order="@item.expense_date.ToString("yyyy-MM-dd")">
+                        <tr id="row-@item.expense_id">
+                            <td class="col-date" data-order="@item.expense_date.ToString("yyyy-MM-dd")">
                                 @item.expense_date.ToString("dd.MM.yyyy")
                             </td>
-                            <td class="fw-bold">
+                            <td class="fw-bold col-person">
                                 @(item.Person != null ? item.Person.person_name : "-")
                             </td>
 
-                            <td>
+                            <td class="col-type">
                                 <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">
                                     @(item.ExpenseType != null ? item.ExpenseType.expensetype_name : "-")
                                 </span>
                             </td>
 
-                            <td>
+                            <td class="col-payment">
                                 <span class="badge bg-info bg-opacity-10 text-info border border-info">
                                     <i class="bi bi-wallet2 me-1"></i>
                                     @(item.PaymentType != null ? item.PaymentType.paymenttype_name : "-")
                                 </span>
                             </td>
 
-                            <td class="text-muted small">@item.expense_description</td>
+                            <td class="text-muted small col-desc">@item.expense_description</td>
 
-                            <td class="text-end fw-bold text-danger pe-3">
+                            <td class="text-end fw-bold text-danger pe-3 col-amount">
                                 -@item.expense_amount.ToString("N2", trCulture) ₺
                             </td>
 
@@ -95,7 +111,6 @@
             </div>
             <form id="createForm" method="post">
                 <div class="modal-body">
-
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tarih</label>
@@ -155,7 +170,6 @@
                         <label class="form-label">Açıklama</label>
                         <textarea name="expense_description" class="form-control" rows="2"></textarea>
                     </div>
-
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
@@ -236,7 +250,6 @@
                         <label class="form-label">Açıklama</label>
                         <textarea name="expense_description" id="edit_desc" class="form-control" rows="2"></textarea>
                     </div>
-
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
@@ -249,33 +262,19 @@
 
 @section Scripts {
     <script>
-
-
         $(document).ready(function() {
-          // --- A. DÜZENLEME BUTONU ---
+
+            // --- A. DÜZENLEME BUTONU ---
             $('.datatable').on('click', '.btn-edit', function() {
-                var id = $(this).data('id');
-                var personId = $(this).data('person');
-                var expenseTypeId = $(this).data('expensetype');
-                var paymentTypeId = $(this).data('paymenttype');
+                var btn = $(this);
 
-                // HTML'deki data-amount zaten "1.905,53" formatında geliyor (View'da ayarlamıştık)
-                var amount = $(this).data('amount');
-
-                var dateStr = $(this).data('date');
-                var desc = $(this).data('desc');
-
-                $('#edit_id').val(id);
-
-                $('#edit_person').val(personId).trigger('change');
-                $('#edit_expensetype').val(expenseTypeId).trigger('change');
-                $('#edit_paymenttype').val(paymentTypeId).trigger('change');
-
-                // Inputa olduğu gibi basıyoruz (1.905,53)
-                $('#edit_amount').val(amount);
-
-                $('#edit_date').val(dateStr);
-                $('#edit_desc').val(desc);
+                $('#edit_id').val(btn.data('id'));
+                $('#edit_person').val(btn.data('person')).trigger('change');
+                $('#edit_expensetype').val(btn.data('expensetype')).trigger('change');
+                $('#edit_paymenttype').val(btn.data('paymenttype')).trigger('change');
+                $('#edit_amount').val(btn.data('amount'));
+                $('#edit_date').val(btn.data('date'));
+                $('#edit_desc').val(btn.data('desc'));
 
                 $('#editModal').modal('show');
             });
@@ -283,51 +282,128 @@
             // --- B. EKLEME (AJAX) ---
             $('#createForm').submit(function(e) {
                 e.preventDefault();
-                processForm($(this), '/Expense/Create');
+                // Butonu bul ve kitle
+                var btn = $(this).find('button[type="submit"]');
+                disableButton(btn);
+
+                processForm($(this), '/Expense/Create', btn);
             });
 
             // --- C. GÜNCELLEME (AJAX) ---
             $('#editForm').submit(function(e) {
                 e.preventDefault();
-                processForm($(this), '/Expense/Edit');
+                // Butonu bul ve kitle
+                var btn = $(this).find('button[type="submit"]');
+                disableButton(btn);
+
+                processForm($(this), '/Expense/Edit', btn);
             });
 
-            // --- D. ORTAK FORM GÖNDERME FONKSİYONU ---
-            function processForm(form, url) {
-                // 1. Form verilerini dizi olarak alıyoruz
+            // --- D. ORTAK FORM İŞLEYİCİ ---
+            function processForm(form, url, btnElement) {
                 var formDataArray = form.serializeArray();
 
-                // 2. 'expense_amount' alanını bulup değerini temizliyoruz
-                // Yapılan işlem: Sadece NOKTALARI siliyoruz. Virgül kalıyor.
-                // Örnek: "1.905,53" -> "1905,53" (Sunucu bunu doğru anlar)
+                // Nokta temizleme
                 for (var i = 0; i < formDataArray.length; i++) {
                     if (formDataArray[i].name === "expense_amount") {
-                        // Sadece binlik noktaları siliyoruz, virgüle dokunmuyoruz!
                         formDataArray[i].value = formDataArray[i].value.replace(/\./g, '');
                         break;
                     }
                 }
 
-                // 3. Temizlenmiş veriyle AJAX atıyoruz
                 $.ajax({
                     url: url,
                     type: 'POST',
-                    data: formDataArray, // Düzeltilmiş veriyi gönderiyoruz
+                    data: formDataArray,
                     success: function(response) {
                         if (response.success) {
                             $('.modal').modal('hide');
                             showToast('success', response.message);
-                            setTimeout(() => location.reload(), 1000);
+
+                            if (url.includes("Create")) {
+                                addRow(response.data);
+                                form[0].reset();
+                            }
+                            else if (url.includes("Edit")) {
+                                updateRow(response.data);
+                            }
                         } else {
                             showToast('error', response.message);
                         }
                     },
-                    error: function() { showToast('error', 'Hata oluştu.'); }
+                    error: function() { showToast('error', 'Hata oluştu.'); },
+                    complete: function() {
+                        // İşlem ne olursa olsun (Hata/Başarı) butonu aç
+                        enableButton(btnElement);
+                    }
                 });
+            }
+
+            // --- BUTON KİLİTLEME YARDIMCILARI ---
+            function disableButton(btn) {
+                btn.prop('disabled', true);
+                // Butonun orijinal metnini sakla
+                btn.data('original-text', btn.html());
+                // Loading ikonu koy
+                btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...');
+            }
+
+            function enableButton(btn) {
+                btn.prop('disabled', false);
+                // Orijinal metni geri yükle
+                btn.html(btn.data('original-text'));
+            }
+
+            // --- TABLO FONKSİYONLARI (Aynen Kalıyor) ---
+            function addRow(data) {
+                var newRow = `
+                    <tr id="row-${data.id}" class="table-success" style="transition: all 1s;">
+                        <td class="col-date" data-order="${data.dateRaw}">${data.dateStr}</td>
+                        <td class="fw-bold col-person">${data.person}</td>
+                        <td class="col-type"><span class="badge bg-warning bg-opacity-10 text-warning border border-warning">${data.type}</span></td>
+                        <td class="col-payment"><span class="badge bg-info bg-opacity-10 text-info border border-info"><i class="bi bi-wallet2 me-1"></i> ${data.payment}</span></td>
+                        <td class="text-muted small col-desc">${data.desc || ''}</td>
+                        <td class="text-end fw-bold text-danger pe-3 col-amount">-${data.amountRaw} ₺</td>
+                        <td>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button class="btn btn-warning btn-sm text-white btn-edit"
+                                    data-id="${data.id}" data-person="${data.personId}" data-expensetype="${data.typeId}"
+                                    data-paymenttype="${data.paymentId}" data-amount="${data.amountRaw}" data-date="${data.dateRaw}" data-desc="${data.desc || ''}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteItem(${data.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                $('table.datatable tbody').prepend(newRow);
+                setTimeout(() => $(`#row-${data.id}`).removeClass('table-success'), 1500);
+            }
+
+            function updateRow(data) {
+                var row = $(`#row-${data.id}`);
+                row.find('.col-date').html(data.dateStr).attr('data-order', data.dateRaw);
+                row.find('.col-person').text(data.person);
+                row.find('.col-type span').text(data.type);
+                row.find('.col-payment span').html('<i class="bi bi-wallet2 me-1"></i> ' + data.payment);
+                row.find('.col-desc').text(data.desc || '');
+                row.find('.col-amount').text('-' + data.amountRaw + ' ₺');
+
+                var btn = row.find('.btn-edit');
+                btn.data('person', data.personId);
+                btn.data('expensetype', data.typeId);
+                btn.data('paymenttype', data.paymentId);
+                btn.data('amount', data.amountRaw);
+                btn.data('date', data.dateRaw);
+                btn.data('desc', data.desc || '');
+
+                row.addClass('table-warning');
+                setTimeout(() => row.removeClass('table-warning'), 1500);
             }
         });
 
-        // --- E. SİLME ---
+        // --- SİLME İŞLEMİ (Button Disable Eklendi) ---
         function deleteItem(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -349,7 +425,8 @@
                         success: function(response) {
                             if (response.success) {
                                 showToast('success', response.message);
-                                setTimeout(() => location.reload(), 1000);
+                                var row = $(`#row-${id}`);
+                                row.fadeOut(500, function() { $(this).remove(); });
                             } else {
                                 showToast('error', response.message);
                             }
